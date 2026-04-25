@@ -18,6 +18,7 @@
 
 #include "einheit/adapters/example/ui_adapter.h"
 #include "einheit/adapters/hd_relay/ui_adapter.h"
+#include "einheit/adapters/shell/ui_adapter.h"
 #include "einheit/ui/adapter.h"
 #include "einheit/ui/render/template_engine.h"
 #include "einheit/ui/route.h"
@@ -84,6 +85,19 @@ auto main(int argc, char **argv) -> int {
   std::string hd_url = "http://127.0.0.1:9090";
   std::string hd_token;
 
+  // Shell adapter (web terminal). Off unless --shell is passed.
+  bool enable_shell = false;
+  std::string shell_launcher_path;
+  std::string shell_cli_path;
+  std::string shell_adapter = "example";
+  std::string shell_role = "operator";
+  std::string shell_user = "operator";
+  std::uint32_t shell_uid = 0;
+  std::uint32_t shell_gid = 0;
+  std::string shell_target;
+  std::string shell_endpoint;
+  std::string shell_event_endpoint;
+
   app.add_option("--bind", bind_addr, "Bind address");
   app.add_option("--port", port, "TCP port");
   app.add_option("--tls-cert", tls_cert, "TLS certificate path");
@@ -103,6 +117,31 @@ auto main(int argc, char **argv) -> int {
   app.add_option("--hd-token", hd_token,
                  "Bearer token for the hd metrics endpoint "
                  "(optional)");
+
+  app.add_flag("--shell", enable_shell,
+               "Mount the /shell web terminal alongside the "
+               "primary adapter. Requires --shell-launcher and "
+               "--shell-cli.");
+  app.add_option("--shell-launcher", shell_launcher_path,
+                 "Absolute path to einheit-shell-launcher");
+  app.add_option("--shell-cli", shell_cli_path,
+                 "Absolute path to the einheit cli binary");
+  app.add_option("--shell-adapter", shell_adapter,
+                 "Cli adapter for shell sessions (default 'example')");
+  app.add_option("--shell-role", shell_role,
+                 "Default role forwarded to cli (admin|operator|any)");
+  app.add_option("--shell-user", shell_user,
+                 "Operator name forwarded to cli (audit identity)");
+  app.add_option("--shell-uid", shell_uid,
+                 "Numeric uid the launcher drops to (0 = no drop)");
+  app.add_option("--shell-gid", shell_gid,
+                 "Numeric gid the launcher drops to");
+  app.add_option("--shell-target", shell_target,
+                 "Optional --target forwarded to cli");
+  app.add_option("--shell-endpoint", shell_endpoint,
+                 "Optional --endpoint forwarded to cli");
+  app.add_option("--shell-event-endpoint", shell_event_endpoint,
+                 "Optional --event-endpoint forwarded to cli");
 
   try {
     app.parse(argc, argv);
@@ -127,6 +166,13 @@ auto main(int argc, char **argv) -> int {
   einheit::ui::render::TemplateEngineConfig tcfg;
   // Adapter dir first so it can shadow framework partials.
   tcfg.search_paths.push_back(adapter->TemplatesDir());
+  // Shell adapter's templates dir (when enabled) sits next so its
+  // shell/terminal partial resolves; falls back to framework if
+  // not enabled.
+  if (enable_shell) {
+    tcfg.search_paths.push_back(
+        einheit::adapters::shell::TemplatesDir());
+  }
   tcfg.search_paths.push_back(ResolveTemplatesDir(templates_dir));
 #ifdef EINHEIT_UI_TEMPLATE_HOT_RELOAD
   tcfg.hot_reload = true;
@@ -169,6 +215,27 @@ auto main(int argc, char **argv) -> int {
   einheit::ui::AdapterContext ctx{
       .app = &crow_app, .templates = &engine, .events = &events};
   adapter->Mount(ctx);
+
+  if (enable_shell) {
+    einheit::adapters::shell::ShellConfig scfg2;
+    scfg2.launcher_path = shell_launcher_path;
+    scfg2.cli_path = shell_cli_path;
+    scfg2.cli_adapter = shell_adapter;
+    scfg2.default_role = shell_role;
+    scfg2.default_user = shell_user;
+    scfg2.uid = shell_uid;
+    scfg2.gid = shell_gid;
+    scfg2.cli_target = shell_target;
+    scfg2.cli_endpoint = shell_endpoint;
+    scfg2.cli_event_endpoint = shell_event_endpoint;
+    if (auto r = einheit::adapters::shell::Mount(crow_app, engine,
+                                                   scfg2);
+        !r) {
+      std::cerr << std::format("shell adapter: {}\n",
+                               r.error().message);
+      return 1;
+    }
+  }
 
   if (auto r = einheit::ui::Run(crow_app, scfg); !r) {
     std::cerr << std::format("server: {}\n", r.error().message);

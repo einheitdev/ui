@@ -1,0 +1,36 @@
+{# Web terminal page. Vendoring xterm.js + the fit and attach
+   addons + the theme glue is task 5; today the page sets up the
+   container, loads the assets if they exist, and bridges keystrokes
+   over /shell/ws. The same surface — minus the addons — works as a
+   bare textarea fallback if xterm.js is missing. #}
+<section class="card">
+  <h2 class="card-title">shell</h2>
+  <div class="card-body">
+    <p style="margin:0 0 12px 0; color: var(--einheit-dim);">
+      einheit-cli over a sandboxed PTY. Locked mode: no host shell,
+      no pager spawn, no file paths.
+    </p>
+    <div id="terminal" class="shell-terminal"
+         data-ws-path="{{ ws_path }}"
+         data-adapter="{{ adapter }}"></div>
+    <noscript>
+      <div class="card card-warn"
+           style="margin-top:12px">
+        This page needs JavaScript to render the terminal.
+      </div>
+    </noscript>
+  </div>
+</section>
+
+{# Fall back to a "task 5 will vendor xterm.js" notice if the
+   xterm.js asset is not present yet. The bootstrap script tests
+   `window.Terminal` after the lazy load and shows a textarea
+   pretending to be a terminal so we still have a smoke-test
+   surface for the WS bridge. #}
+<link rel="stylesheet" href="/assets/xterm/xterm.css"
+      onerror="this.remove()">
+<script src="/assets/xterm/xterm.js"
+        onerror="window.__einheitNoXterm = true"></script>
+<script src="/assets/xterm/xterm-addon-fit.js"
+        onerror="window.__einheitNoFit = true"></script>
+<script src="/assets/shell/terminal.js"></script>

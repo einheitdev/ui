@@ -92,6 +92,7 @@ include("cmake/lib_ui_core.cmake")
 if(EINHEIT_UI_BUILD_ADAPTERS)
   add_subdirectory(adapters/example)
   add_subdirectory(adapters/hd_relay)
+  add_subdirectory(adapters/shell)
 endif()
 
 if(EINHEIT_UI_BUILD_BINARY)
