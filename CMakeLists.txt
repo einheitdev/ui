@@ -93,6 +93,7 @@ if(EINHEIT_UI_BUILD_ADAPTERS)
   add_subdirectory(adapters/example)
   add_subdirectory(adapters/hd_relay)
   add_subdirectory(adapters/shell)
+  add_subdirectory(adapters/editor)
 endif()
 
 if(EINHEIT_UI_BUILD_BINARY)

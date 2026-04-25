@@ -17,6 +17,7 @@
 #include <crow.h>
 #include <spdlog/spdlog.h>
 
+#include "einheit/adapters/editor/ui_adapter.h"
 #include "einheit/adapters/example/ui_adapter.h"
 #include "einheit/adapters/hd_relay/ui_adapter.h"
 #include "einheit/adapters/shell/ui_adapter.h"
@@ -86,6 +87,11 @@ auto main(int argc, char **argv) -> int {
   std::string hd_url = "http://127.0.0.1:9090";
   std::string hd_token;
 
+  // Editor adapter (CodeMirror 6 page). Off unless --editor.
+  bool enable_editor = false;
+  std::string editor_starter_text;
+  std::string editor_starter_lang;
+
   // Shell adapter (web terminal). Off unless --shell is passed.
   bool enable_shell = false;
   std::string shell_launcher_path;
@@ -119,6 +125,18 @@ auto main(int argc, char **argv) -> int {
   app.add_option("--hd-token", hd_token,
                  "Bearer token for the hd metrics endpoint "
                  "(optional)");
+
+  app.add_flag("--editor", enable_editor,
+               "Mount the /edit CodeMirror 6 source editor "
+               "alongside the primary adapter. The framework's "
+               "scaffold is plain text; products ship their "
+               "own grammar + analysis round-trip.");
+  app.add_option("--editor-starter-text", editor_starter_text,
+                 "Initial buffer contents shown on first load "
+                 "of /edit (default empty)");
+  app.add_option("--editor-starter-lang", editor_starter_lang,
+                 "Language hint passed to the client-side editor "
+                 "bootstrap (e.g. \"fwl\")");
 
   app.add_flag("--shell", enable_shell,
                "Mount the /shell web terminal alongside the "
@@ -178,6 +196,10 @@ auto main(int argc, char **argv) -> int {
   if (enable_shell) {
     tcfg.search_paths.push_back(
         einheit::adapters::shell::TemplatesDir());
+  }
+  if (enable_editor) {
+    tcfg.search_paths.push_back(
+        einheit::adapters::editor::TemplatesDir());
   }
   tcfg.search_paths.push_back(ResolveTemplatesDir(templates_dir));
 #ifdef EINHEIT_UI_TEMPLATE_HOT_RELOAD
@@ -312,6 +334,20 @@ auto main(int argc, char **argv) -> int {
     // Tell the framework's layout where the shell lives so every
     // product page renders a "Shell" link in the sidebar foot.
     einheit::ui::SetLayoutShellPath("/shell");
+  }
+
+  if (enable_editor) {
+    einheit::adapters::editor::EditorConfig ecfg;
+    ecfg.starter_text = editor_starter_text;
+    ecfg.starter_lang = editor_starter_lang;
+    if (auto r = einheit::adapters::editor::Mount(crow_app, engine,
+                                                    ecfg);
+        !r) {
+      std::cerr << std::format("editor adapter: {}\n",
+                               r.error().message);
+      return 1;
+    }
+    einheit::ui::SetLayoutEditorPath("/edit");
   }
 
   if (auto r = einheit::ui::Run(crow_app, scfg); !r) {

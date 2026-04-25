@@ -117,6 +117,15 @@ auto SetLayoutShellPath(std::string path) -> void;
 /// Read the current shell-path setting. Used by Render().
 auto LayoutShellPath() -> std::string;
 
+/// Same call-once-at-startup pattern for the source editor. Sets
+/// the path the layout's sidebar foot links to as "Edit". Empty
+/// string hides the entry.
+/// @param path URL path; pass "" to hide.
+auto SetLayoutEditorPath(std::string path) -> void;
+
+/// Read the current editor-path setting. Used by Render().
+auto LayoutEditorPath() -> std::string;
+
 /// Set the JSON the layout uses for `meta.nav` when an individual
 /// route's RenderArgs didn't supply one. Lets each route handler
 /// skip the boilerplate of building nav from `adapter->Nav()` —

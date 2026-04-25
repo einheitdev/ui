@@ -32,6 +32,14 @@ std::string &ShellPath() {
   static std::string p;
   return p;
 }
+std::mutex &EditorMu() {
+  static std::mutex m;
+  return m;
+}
+std::string &EditorPath() {
+  static std::string p;
+  return p;
+}
 
 // Process-global fallbacks for meta.nav and meta.brand. Each
 // adapter route used to spell these out by hand; with the
@@ -77,6 +85,16 @@ auto SetLayoutShellPath(std::string path) -> void {
 auto LayoutShellPath() -> std::string {
   std::lock_guard<std::mutex> lk(ShellMu());
   return ShellPath();
+}
+
+auto SetLayoutEditorPath(std::string path) -> void {
+  std::lock_guard<std::mutex> lk(EditorMu());
+  EditorPath() = std::move(path);
+}
+
+auto LayoutEditorPath() -> std::string {
+  std::lock_guard<std::mutex> lk(EditorMu());
+  return EditorPath();
 }
 
 auto SetLayoutPrimaryNav(nlohmann::json nav) -> void {
@@ -161,6 +179,14 @@ auto Render(const render::TemplateEngine &eng, ResponseFormat fmt,
           path = ShellPath();
         }
         meta["shell"] = path;
+      }
+      if (!meta.contains("editor")) {
+        std::string path;
+        {
+          std::lock_guard<std::mutex> lk(EditorMu());
+          path = EditorPath();
+        }
+        meta["editor"] = path;
       }
       nlohmann::json layout_ctx = nlohmann::json::object();
       layout_ctx["meta"] = std::move(meta);

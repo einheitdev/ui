@@ -158,6 +158,16 @@
         </a>
       </div>
     </div>
+{% if meta.editor %}
+    <a href="{{ meta.editor }}"
+       class="sidebar-item{% if meta.active == "edit" %} active{% endif %}"
+       title="Edit">
+      <svg class="icon" width="20" height="20" aria-hidden="true">
+        <use href="/assets/icons.svg#square-pen"/>
+      </svg>
+      <span class="sidebar-label">Edit</span>
+    </a>
+{% endif %}
 {% if meta.shell %}
     <a href="{{ meta.shell }}"
        class="sidebar-item{% if meta.active == "shell" %} active{% endif %}"

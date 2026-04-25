@@ -445,6 +445,66 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
   text-align: center;
 }
 
+/* ---------------------------------------------------------------
+   Editor page. Source pane (CM6) on the left, analysis pane on
+   the right. Both panes share the same card chrome as the rest
+   of the UI; CM6's own editor styling lives inside #editor-source
+   and only the host frame is themed here.
+   --------------------------------------------------------------- */
+.editor-shell {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 32%);
+  gap: 12px;
+  height: calc(100vh - 80px);
+  min-height: 480px;
+}
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  background: var(--einheit-bg1);
+  border: 1px solid var(--einheit-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.editor-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--einheit-border);
+  background: var(--einheit-bg);
+}
+.editor-pane-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--einheit-fg3);
+  font-weight: 500;
+}
+.editor-pane-meta {
+  font-family: var(--einheit-font-mono);
+  font-size: 11px;
+  color: var(--einheit-fg3);
+}
+.editor-source {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.editor-source .cm-editor { height: 100%; }
+.editor-source .cm-scroller { font-family: var(--einheit-font-mono); }
+.editor-analysis {
+  flex: 1;
+  padding: 12px 14px;
+  overflow-y: auto;
+}
+.editor-analysis-empty {
+  margin: 0;
+  color: var(--einheit-fg3);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* Lucide-derived sprite icons. Theme via currentColor — every
    color: <var> on the wrapping element tints the icon. The
    stroke-only origin means stroke-width and -linejoin are baked

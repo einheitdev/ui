@@ -1,0 +1,42 @@
+{# Editor page. Two panes side-by-side: source on the left in
+   CodeMirror 6, analysis on the right. The analysis pane today
+   is a scaffold — products will plug in their compiler /
+   verifier round-trip and render the result here.
+
+   Required (from the route handler):
+     starter_text — initial buffer contents
+     starter_lang — language hint passed to the bootstrap script
+                    (today informational only; reserved for
+                    products that ship Lezer grammars).
+#}
+<div class="editor-shell">
+  <section class="editor-pane">
+    <header class="editor-pane-head">
+      <span class="editor-pane-title">source</span>
+      <span class="editor-pane-meta"
+            id="editor-meta-lang">{{ starter_lang }}</span>
+    </header>
+    <div id="editor-source"
+         class="editor-source"
+         data-starter-text="{{ starter_text }}"
+         data-starter-lang="{{ starter_lang }}"></div>
+  </section>
+  <section class="editor-pane">
+    <header class="editor-pane-head">
+      <span class="editor-pane-title">analysis</span>
+      <span class="editor-pane-meta">scaffold</span>
+    </header>
+    <div class="editor-analysis">
+      <p class="editor-analysis-empty">
+        No language adapter loaded. Products plug in their compiler
+        / verifier round-trip and render section evaluations,
+        verifier diagnostics, and split-point indicators here. The
+        editor's CM6 state-effect API streams server diagnostics
+        back as decorations + gutter markers.
+      </p>
+    </div>
+  </section>
+</div>
+
+<script src="/assets/cm6/codemirror.js" defer></script>
+<script src="/assets/editor/editor.js" defer></script>
