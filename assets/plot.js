@@ -5,10 +5,19 @@
 // script reads each figure's data-* attributes for config and
 // hydrates with the historic ring-buffer dump baked into
 // data-points.
+//
+// Body uses hx-target=main.app-main, so the body bottom (where
+// this script lives) only loads once per browser session. Plot
+// figures live inside <main> and so come and go as the operator
+// navigates. We re-bind on every htmx:afterSettle and prune
+// entries whose figure left the DOM, keeping the byTopic map
+// from leaking dead uPlot instances.
 (function () {
   'use strict';
 
   if (typeof uPlot === 'undefined') return;
+  if (window.__einheitPlots) return;
+  window.__einheitPlots = true;
 
   function cssVar(name, fallback) {
     const v = getComputedStyle(document.documentElement)
@@ -58,20 +67,16 @@
     return cols;
   }
 
-  // ------------------------------------------------------------
-  // Set up every plot host on the page.
-  // ------------------------------------------------------------
-
-  const figures = Array.from(document.querySelectorAll(
-      'figure.plot[data-topic]'));
-  if (figures.length === 0) return;
-
+  // byTopic: topic → array of {fig, host, u, data, windowS,
+  // seriesCount}. Multiple figures may share a topic (rare but
+  // possible — same data series rendered at two zoom levels);
+  // the WS handler updates them all.
   const byTopic = new Map();
 
-  for (const fig of figures) {
+  function bindFigure(fig) {
+    if (fig.dataset.bound === '1') return;
     const host = fig.querySelector('.plot-host');
-    if (!host) continue;
-
+    if (!host) return;
     const topic = fig.dataset.topic;
     const windowS = parseInt(fig.dataset.windowS || '300', 10);
     const yLabel = fig.dataset.yLabel || '';
@@ -81,19 +86,14 @@
       points = JSON.parse(fig.dataset.points || '[]');
     } catch (e) {
       console.error('plot.js: bad config on', fig, e);
-      continue;
+      return;
     }
 
     const seriesCfg = [
-      // Index 0 is the x-axis (timestamp seconds).
       {label: 'time'},
       ...series.map(function (s) {
-        return {
-          label: s.label,
-          stroke: colorOf(s.semantic),
-          width: 1.5,
-          points: {show: false},
-        };
+        return {label: s.label, stroke: colorOf(s.semantic),
+                width: 1.5, points: {show: false}};
       }),
     ];
 
@@ -118,11 +118,12 @@
     };
 
     const u = new uPlot(opts, data, host);
-    byTopic.set(topic, {u: u, data: data, windowS: windowS,
-                        seriesCount: series.length});
+    fig.dataset.bound = '1';
+    const slot = {fig: fig, host: host, u: u, data: data,
+                  windowS: windowS, seriesCount: series.length};
+    if (!byTopic.has(topic)) byTopic.set(topic, []);
+    byTopic.get(topic).push(slot);
 
-    // Resize observer keeps the chart filling its host as the
-    // sidebar pin/expand changes the page width.
     if (window.ResizeObserver) {
       const ro = new ResizeObserver(function () {
         u.setSize({width: host.clientWidth,
@@ -130,6 +131,28 @@
       });
       ro.observe(host);
     }
+  }
+
+  function pruneDeadFigures() {
+    for (const [topic, slots] of byTopic) {
+      const live = slots.filter(function (s) {
+        if (s.fig.isConnected) return true;
+        try { s.u.destroy(); } catch (e) {}
+        return false;
+      });
+      if (live.length === 0) byTopic.delete(topic);
+      else byTopic.set(topic, live);
+    }
+  }
+
+  function bindAll() {
+    document.querySelectorAll('figure.plot[data-topic]')
+        .forEach(bindFigure);
+  }
+
+  function rescan() {
+    pruneDeadFigures();
+    bindAll();
   }
 
   // ------------------------------------------------------------
@@ -145,14 +168,20 @@
     try { msg = JSON.parse(ev.data); }
     catch (e) { return; }
     if (msg.type !== 'data' || !msg.topic) return;
-    const slot = byTopic.get(msg.topic);
-    if (!slot) return;
+    const slots = byTopic.get(msg.topic);
+    if (!slots) return;
     const point = msg.point;
-    slot.data[0].push(point[0]);
-    for (let i = 0; i < slot.seriesCount; i++) {
-      slot.data[i + 1].push(point[i + 1] ?? null);
+    for (const slot of slots) {
+      if (!slot.fig.isConnected) continue;
+      slot.data[0].push(point[0]);
+      for (let i = 0; i < slot.seriesCount; i++) {
+        slot.data[i + 1].push(point[i + 1] ?? null);
+      }
+      slot.data = trimByWindow(slot.data, slot.windowS);
+      slot.u.setData(slot.data);
     }
-    slot.data = trimByWindow(slot.data, slot.windowS);
-    slot.u.setData(slot.data);
   });
+
+  bindAll();
+  document.body.addEventListener('htmx:afterSettle', rescan);
 })();

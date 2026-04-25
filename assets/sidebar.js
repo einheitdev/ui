@@ -216,4 +216,20 @@
   applyTheme(getCookie('einheit_theme') || 'psychotropic');
   applyScale(getCookie('einheit_scale') || '1');
   applyLang(getCookie('einheit_lang') || 'en');
+
+  // ----------------------------------------------------------
+  // Active sidebar item. Body uses hx-target=main.app-main so
+  // only the main content swaps on nav — the sidebar element is
+  // persistent and its server-rendered .active class is stuck on
+  // whatever path was loaded first. Walk the entries on every
+  // settle and toggle .active to match the current pathname.
+  // ----------------------------------------------------------
+  function updateActive() {
+    const path = location.pathname;
+    sidebar.querySelectorAll('a[href]').forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('href') === path);
+    });
+  }
+  updateActive();
+  document.body.addEventListener('htmx:afterSettle', updateActive);
 })();

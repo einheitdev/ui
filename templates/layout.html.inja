@@ -37,7 +37,10 @@
   <script src="/assets/uplot.min.js" defer></script>
 </head>
 <body class="app-shell" hx-ext="ws" ws-connect="/events"
-      hx-boost="true">
+      hx-boost="true"
+      hx-target="main.app-main"
+      hx-select="main.app-main"
+      hx-swap="outerHTML">
   {% include "partials/sidebar" %}
   <main class="app-main">
     <!--EINHEIT_BODY-->
