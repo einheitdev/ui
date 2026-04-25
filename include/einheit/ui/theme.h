@@ -36,32 +36,42 @@ struct Theme {
   /// Display name shown in dev tools and operator UI.
   std::string name = "psychotropic";
 
-  /// Page background (deepest).
-  Rgb bg{15, 23, 42};
-  /// Card / panel background.
-  Rgb bg1{30, 41, 59};
-  /// Hover / pressed background.
-  Rgb bg2{51, 65, 85};
+  // Defaults are the real psychotropic palette — hex values lifted
+  // from psychotropic.nvim/lua/psychotropic/colors/palette.lua so
+  // the operator UI tracks the editor scheme. Greys come from the
+  // nvim grey ramp; semantic accents map to the nvim palette's
+  // lime / khaki / red / lightblue / violet.
 
-  /// Primary foreground.
-  Rgb fg{226, 232, 240};
-  /// Secondary foreground (labels, captions).
-  Rgb fg2{148, 163, 184};
-  /// Tertiary foreground (placeholder, dim).
-  Rgb fg3{100, 116, 139};
+  /// Page background (deepest). nvim `bg`/`black` (#101010).
+  Rgb bg{16, 16, 16};
+  /// Card / panel background. nvim `grey11`.
+  Rgb bg1{28, 28, 28};
+  /// Hover / pressed background. nvim `grey18`.
+  Rgb bg2{46, 46, 46};
 
-  /// Semantic — green: healthy, allowed, active.
-  Rgb good{34, 197, 94};
-  /// Semantic — yellow: degraded, connecting, rate-limited.
-  Rgb warn{234, 179, 8};
-  /// Semantic — red: failed, denied, dropped.
-  Rgb bad{239, 68, 68};
-  /// Semantic — cyan: labels, neutral highlights.
-  Rgb info{56, 189, 248};
-  /// Borders, dividers.
-  Rgb border{51, 65, 85};
-  /// Brand accent — logo, primary buttons, focus ring.
-  Rgb accent{56, 189, 248};
+  /// Primary foreground. nvim `white` (#F6FAFA).
+  Rgb fg{246, 250, 250};
+  /// Secondary foreground (labels, captions). nvim `grey70`.
+  Rgb fg2{178, 178, 178};
+  /// Tertiary foreground (placeholder, dim). nvim `grey50`.
+  Rgb fg3{128, 128, 128};
+
+  /// Semantic — green: healthy, allowed, active. nvim `lime`.
+  Rgb good{153, 218, 61};
+  /// Semantic — yellow: degraded, connecting, rate-limited. nvim
+  /// `khaki`.
+  Rgb warn{249, 203, 82};
+  /// Semantic — red: failed, denied, dropped. nvim `red`.
+  Rgb bad{255, 84, 84};
+  /// Semantic — blue: labels, neutral highlights. nvim
+  /// `lightblue`.
+  Rgb info{77, 185, 244};
+  /// Borders, dividers. nvim `grey23`.
+  Rgb border{58, 58, 58};
+  /// Brand accent — logo, primary buttons, focus ring. nvim
+  /// `violet`. The most psychotropic-feeling colour in the
+  /// palette without being neon-magenta-aggressive.
+  Rgb accent{224, 97, 249};
 };
 
 /// Default truecolor dark palette. Matches the cli "psychotropic".
