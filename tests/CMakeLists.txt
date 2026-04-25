@@ -82,3 +82,21 @@ gtest_discover_tests(test_example_adapter
   DISCOVERY_TIMEOUT 10
   PROPERTIES TIMEOUT 30
 )
+
+# einheit-shell-launcher argv-shape test. Links the launcher's
+# sandbox object directly so we can call BuildCliArgv without
+# building or executing the launcher binary itself.
+if(TARGET einheit-shell-launcher)
+  add_executable(test_shell_launcher_argv
+    ${PROJECT_SOURCE_DIR}/binaries/einheit-shell-launcher/tests/test_argv.cc
+    ${PROJECT_SOURCE_DIR}/binaries/einheit-shell-launcher/src/sandbox.cc
+  )
+  target_include_directories(test_shell_launcher_argv
+    PRIVATE ${PROJECT_SOURCE_DIR})
+  target_link_libraries(test_shell_launcher_argv
+    PRIVATE GTest::gtest GTest::gtest_main)
+  gtest_discover_tests(test_shell_launcher_argv
+    DISCOVERY_TIMEOUT 10
+    PROPERTIES TIMEOUT 30
+  )
+endif()

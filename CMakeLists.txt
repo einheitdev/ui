@@ -96,6 +96,7 @@ endif()
 
 if(EINHEIT_UI_BUILD_BINARY)
   include("cmake/einheit_ui_binary.cmake")
+  include("cmake/einheit_shell_launcher_binary.cmake")
 endif()
 
 if(EINHEIT_UI_BUILD_TESTS)
