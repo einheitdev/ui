@@ -94,32 +94,43 @@ auto Mount(crow::SimpleApp &app,
     return std::move(*r);
   });
 
+  // Build a fresh PtyLaunchSpec from the deploy-time config.
+  // Captured by onopen + onmessage so a respawn after
+  // cli `exit` can use the same spec.
+  auto make_spec = [cfg]() {
+    PtyLaunchSpec spec;
+    spec.launcher_path = cfg.launcher_path;
+    spec.cli_path = cfg.cli_path;
+    spec.adapter = cfg.cli_adapter;
+    spec.role = cfg.default_role;
+    spec.user = cfg.default_user;
+    spec.uid = cfg.uid;
+    spec.gid = cfg.gid;
+    spec.target = cfg.cli_target;
+    spec.endpoint = cfg.cli_endpoint;
+    spec.event_endpoint = cfg.cli_event_endpoint;
+    spec.learn = cfg.cli_learn;
+    return spec;
+  };
+
+  auto make_sink = [](crow::websocket::connection &conn) {
+    return [&conn](std::string_view chunk) {
+      conn.send_text(std::string(chunk));
+    };
+  };
+
   // WS /shell/ws — one PTY per connection.
   CROW_WEBSOCKET_ROUTE(app, "/shell/ws")
-      .onopen([registry, cfg](crow::websocket::connection &conn) {
+      .onopen([registry, make_spec, make_sink](
+                  crow::websocket::connection &conn) {
         auto session = std::make_unique<PtySession>();
-        PtyLaunchSpec spec;
-        spec.launcher_path = cfg.launcher_path;
-        spec.cli_path = cfg.cli_path;
-        spec.adapter = cfg.cli_adapter;
-        spec.role = cfg.default_role;
-        spec.user = cfg.default_user;
-        spec.uid = cfg.uid;
-        spec.gid = cfg.gid;
-        spec.target = cfg.cli_target;
-        spec.endpoint = cfg.cli_endpoint;
-        spec.event_endpoint = cfg.cli_event_endpoint;
-        spec.learn = cfg.cli_learn;
-
         // Capturing &conn is safe — Crow guarantees the
         // connection outlives onopen/onmessage/onclose for this
         // socket, and the reader thread is joined in
         // PtySession's destructor before the unique_ptr is
         // erased from the registry inside onclose.
-        auto sink = [&conn](std::string_view chunk) {
-          conn.send_text(std::string(chunk));
-        };
-        if (auto r = session->Spawn(spec, sink); !r) {
+        if (auto r = session->Spawn(make_spec(), make_sink(conn));
+            !r) {
           spdlog::warn("shell session spawn failed: {}",
                        r.error().message);
           conn.send_text(
@@ -132,25 +143,53 @@ auto Mount(crow::SimpleApp &app,
         registry->sessions[&conn] = std::move(session);
       })
       .onmessage(
-          [registry](crow::websocket::connection &conn,
-                     const std::string &data, bool is_binary) {
-            // Look up the session under the lock; release before
-            // doing PTY I/O so a slow Write doesn't block other
-            // sessions' bookkeeping.
+          [registry, make_spec, make_sink](
+              crow::websocket::connection &conn,
+              const std::string &data, bool is_binary) {
+            // Convention: text frames starting with `{` are JSON
+            // control envelopes (resize); everything else (binary
+            // OR plain-text input) is forwarded as keystrokes.
+            const bool is_control =
+                !is_binary && !data.empty() && data.front() == '{';
+
+            // Look up + check liveness under the lock; release
+            // before doing PTY I/O. If the cli exited (operator
+            // typed `exit`), respawn a fresh session so the next
+            // keystroke gets them back into a working shell —
+            // resize controls in this state are silently dropped
+            // since they're for the dead PTY.
+            std::unique_ptr<PtySession> ended;
             PtySession *session = nullptr;
             {
               std::lock_guard<std::mutex> lk(registry->mu);
               auto it = registry->sessions.find(&conn);
               if (it == registry->sessions.end()) return;
-              session = it->second.get();
+              if (!it->second->IsRunning()) {
+                ended = std::move(it->second);
+              } else {
+                session = it->second.get();
+              }
             }
-            // Convention: text frames starting with `{` are JSON
-            // control envelopes (resize); everything else (binary
-            // OR plain-text input) is forwarded as keystrokes.
-            // xterm.js's attach addon sends keystrokes as text
-            // by default, so we rely on the leading-brace check
-            // rather than the binary flag to discriminate.
-            if (!is_binary && !data.empty() && data.front() == '{') {
+
+            if (ended) {
+              ended.reset();  // Joins the dead reader thread.
+              if (is_control) return;  // Don't respawn for resizes.
+              auto fresh = std::make_unique<PtySession>();
+              if (auto r = fresh->Spawn(make_spec(),
+                                         make_sink(conn));
+                  !r) {
+                spdlog::warn("shell session respawn failed: {}",
+                             r.error().message);
+                conn.send_text("\r\nrespawn failed.\r\n");
+                conn.close("respawn failed");
+                return;
+              }
+              std::lock_guard<std::mutex> lk(registry->mu);
+              registry->sessions[&conn] = std::move(fresh);
+              return;
+            }
+
+            if (is_control) {
               try {
                 auto j = nlohmann::json::parse(data);
                 if (j.value("type", "") == "resize") {

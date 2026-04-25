@@ -165,6 +165,14 @@ auto PtySession::Spawn(const PtyLaunchSpec &spec, ByteSink sink)
         }
       }
       running_.store(false);
+      // Friendly hint so operators know how to come back. The
+      // adapter's onmessage handler watches IsRunning() and
+      // respawns on the next keystroke.
+      if (sink_) {
+        sink_(
+            "\r\n\x1b[33m[session ended — press any key to start "
+            "a new one]\x1b[0m\r\n");
+      }
     });
   } catch (const std::exception &e) {
     Close();

@@ -97,6 +97,13 @@ class PtySession {
   /// to call multiple times.
   auto Close() -> void;
 
+  /// True iff the cli child is still alive and the reader thread
+  /// is still running. Flips to false after the child exits (cli
+  /// `exit` verb, EOF on the master). The adapter checks this on
+  /// every onmessage to decide whether to forward keystrokes or
+  /// to respawn.
+  auto IsRunning() const -> bool { return running_.load(); }
+
  private:
   int master_fd_ = -1;
   int child_pid_ = -1;
