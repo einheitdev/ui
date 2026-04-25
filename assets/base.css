@@ -132,7 +132,7 @@ html[data-sidebar-pinned="true"] .app-main {
 .sidebar input,
 .sidebar select,
 .sidebar textarea { cursor: text; }
-.sidebar:hover,
+html[data-sidebar-hovering="true"] .sidebar,
 html[data-sidebar-pinned="true"] .sidebar { width: 17.5rem; }
 
 .sidebar-head {
@@ -169,7 +169,7 @@ html[data-sidebar-pinned="true"] .sidebar { width: 17.5rem; }
   opacity: 0;
   transition: opacity 150ms ease;
 }
-.sidebar:hover .sidebar-pin,
+html[data-sidebar-hovering="true"] .sidebar .sidebar-pin,
 html[data-sidebar-pinned="true"] .sidebar .sidebar-pin { opacity: 1; }
 .sidebar-pin:hover { color: var(--einheit-fg); background: var(--einheit-bg2); }
 html[data-sidebar-pinned="true"] .sidebar .icon-pin { transform: rotate(90deg); }
@@ -225,7 +225,7 @@ html[data-sidebar-pinned="true"] .sidebar .icon-pin { transform: rotate(90deg); 
   overflow: hidden;
   flex: 1;
 }
-.sidebar:hover .sidebar-label,
+html[data-sidebar-hovering="true"] .sidebar .sidebar-label,
 html[data-sidebar-pinned="true"] .sidebar .sidebar-label {
   opacity: 1;
   max-width: 14rem;
@@ -251,8 +251,8 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-label {
   opacity: 0;
   transition: opacity 150ms ease 50ms, transform 150ms ease;
 }
-.sidebar:hover .sidebar-group-caret,
-.sidebar:hover .sidebar-pick-caret,
+html[data-sidebar-hovering="true"] .sidebar .sidebar-group-caret,
+html[data-sidebar-hovering="true"] .sidebar .sidebar-pick-caret,
 html[data-sidebar-pinned="true"] .sidebar .sidebar-group-caret,
 html[data-sidebar-pinned="true"] .sidebar .sidebar-pick-caret { opacity: 1; }
 .sidebar-group[data-open="true"] > .sidebar-group-head .sidebar-group-caret,
@@ -269,9 +269,9 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick-caret { opacity: 1; }
 }
 /* Submenus only ever expand when the rail is wide enough to show
    labels — collapsed rail keeps them hidden regardless of state. */
-.sidebar:hover .sidebar-group[data-open="true"] > .sidebar-group-body,
+html[data-sidebar-hovering="true"] .sidebar .sidebar-group[data-open="true"] > .sidebar-group-body,
 html[data-sidebar-pinned="true"] .sidebar .sidebar-group[data-open="true"] > .sidebar-group-body,
-.sidebar:hover .sidebar-pick[data-open="true"] > .sidebar-pick-body,
+html[data-sidebar-hovering="true"] .sidebar .sidebar-pick[data-open="true"] > .sidebar-pick-body,
 html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sidebar-pick-body {
   display: flex;
   flex-direction: column;

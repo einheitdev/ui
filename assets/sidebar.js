@@ -13,6 +13,38 @@
   const root = document.documentElement;
 
   // ----------------------------------------------------------
+  // Hover tracker. CSS :hover doesn't survive hx-boost — when
+  // the body swaps, the browser doesn't re-evaluate :hover on
+  // the new sidebar element until the next mousemove, so the
+  // rail collapses and then animates back open. We mirror the
+  // hover state to html[data-sidebar-hovering] via a global
+  // pointer tracker so it persists across swaps.
+  //
+  // The listener is deduped via a window flag because sidebar.js
+  // re-runs on every boosted nav. The tracker uses a sticky
+  // X-band: enter when cursor x < 4rem, leave when x > 17.5rem.
+  // ----------------------------------------------------------
+  if (!window.__einheitSidebarHover) {
+    window.__einheitSidebarHover = true;
+    const COLLAPSED = 64;     // 4rem
+    const EXPANDED = 280;     // 17.5rem
+    document.addEventListener('mousemove', function (ev) {
+      const expanded = root.dataset.sidebarHovering === 'true';
+      const x = ev.clientX;
+      const should = expanded ? x < EXPANDED : x < COLLAPSED;
+      if (should === expanded) return;
+      if (should) {
+        root.dataset.sidebarHovering = 'true';
+      } else {
+        delete root.dataset.sidebarHovering;
+      }
+    });
+    document.addEventListener('mouseleave', function () {
+      delete root.dataset.sidebarHovering;
+    });
+  }
+
+  // ----------------------------------------------------------
   // Pin / unpin. State lives on <html data-sidebar-pinned> so a
   // render-blocking inline <script> in <head> can apply it
   // before the body parses — no width animation flash on
