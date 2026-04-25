@@ -544,7 +544,7 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
   50%      { opacity: 0.1; }
 }
 .xterm.focus .xterm-cursor:not(.xterm-cursor-outline) {
-  animation: einheit-cursor-fade 3.5s ease-in-out infinite;
+  animation: einheit-cursor-fade 2s ease-in-out infinite;
 }
 .editor-analysis {
   flex: 1;
