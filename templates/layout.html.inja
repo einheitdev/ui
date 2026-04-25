@@ -12,6 +12,18 @@
   <style>
     html { background: #101010; color: #f6fafa; }
   </style>
+  {# Render-blocking inline script: reads the pinned-sidebar
+     preference from localStorage and stamps it onto <html>
+     before the body parses. CSS then keys off the html-level
+     attribute so first paint already has the correct rail
+     width — no animation flash on hx-boost'd page swaps. #}
+  <script>
+    try {
+      if (localStorage.getItem('einheit:sidebar:pinned') === '1') {
+        document.documentElement.dataset.sidebarPinned = 'true';
+      }
+    } catch (e) { /* private mode — fall through to default */ }
+  </script>
   <title>{{ meta.title | default("einheit") }}</title>
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/assets/uplot.min.css">

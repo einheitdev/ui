@@ -19,7 +19,10 @@
                     pinned at the bottom. (Cross-adapter nav
                     merging without this hack is a separate
                     follow-up.) #}
-<aside class="sidebar" data-pinned="false">
+{# Pinned state lives on <html data-sidebar-pinned> rather than
+   here — see assets/sidebar.js + the inline head script in the
+   layout. #}
+<aside class="sidebar">
   <div class="sidebar-head">
     <a class="sidebar-brand" href="/" aria-label="home">
       <svg class="icon" width="22" height="22" aria-hidden="true">

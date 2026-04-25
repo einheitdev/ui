@@ -10,27 +10,38 @@
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
   const pinBtn = sidebar.querySelector('.sidebar-pin');
+  const root = document.documentElement;
 
   // ----------------------------------------------------------
-  // Pin / unpin (existing behaviour).
+  // Pin / unpin. State lives on <html data-sidebar-pinned> so a
+  // render-blocking inline <script> in <head> can apply it
+  // before the body parses — no width animation flash on
+  // hx-boost'd page swaps.
   // ----------------------------------------------------------
+
+  function isPinned() {
+    return root.dataset.sidebarPinned === 'true';
+  }
 
   function setPinned(pinned) {
-    sidebar.dataset.pinned = pinned ? 'true' : 'false';
+    if (pinned) {
+      root.dataset.sidebarPinned = 'true';
+    } else {
+      delete root.dataset.sidebarPinned;
+    }
     try {
       localStorage.setItem(PIN_KEY, pinned ? '1' : '0');
     } catch (e) { /* private mode */ }
   }
 
-  let initial = false;
-  try { initial = localStorage.getItem(PIN_KEY) === '1'; } catch (e) {}
-  setPinned(initial);
+  // The inline head script already applied the persisted choice
+  // synchronously. We just need to wire interaction handlers.
 
   if (pinBtn) {
     pinBtn.addEventListener('click', function (ev) {
       ev.preventDefault();
       ev.stopPropagation();
-      setPinned(sidebar.dataset.pinned !== 'true');
+      setPinned(!isPinned());
     });
   }
 
@@ -39,7 +50,7 @@
             'a, button, input, textarea, select, label')) {
       return;
     }
-    setPinned(sidebar.dataset.pinned !== 'true');
+    setPinned(!isPinned());
   });
 
   // ----------------------------------------------------------

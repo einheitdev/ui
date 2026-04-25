@@ -96,9 +96,11 @@ code, pre, kbd, samp {
 }
 /* Pinned sidebar pushes content right so nothing is overlaid;
    hover-expand stays an overlay (transient peek shouldn't
-   reflow the page). :has() keeps the rule colocated with the
-   layout instead of needing JS to mirror the state onto body. */
-body:has(.sidebar[data-pinned="true"]) .app-main {
+   reflow the page). The render-blocking inline <script> in the
+   layout's <head> stamps html[data-sidebar-pinned] before paint,
+   so this rule applies on the first frame after every hx-boost
+   swap — no rail-and-content reflow animation on each page. */
+html[data-sidebar-pinned="true"] .app-main {
   margin-left: 17.5rem;
 }
 
@@ -131,7 +133,7 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
 .sidebar select,
 .sidebar textarea { cursor: text; }
 .sidebar:hover,
-.sidebar[data-pinned="true"] { width: 17.5rem; }
+html[data-sidebar-pinned="true"] .sidebar { width: 17.5rem; }
 
 .sidebar-head {
   position: relative;
@@ -168,9 +170,9 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
   transition: opacity 150ms ease;
 }
 .sidebar:hover .sidebar-pin,
-.sidebar[data-pinned="true"] .sidebar-pin { opacity: 1; }
+html[data-sidebar-pinned="true"] .sidebar .sidebar-pin { opacity: 1; }
 .sidebar-pin:hover { color: var(--einheit-fg); background: var(--einheit-bg2); }
-.sidebar[data-pinned="true"] .icon-pin { transform: rotate(90deg); }
+html[data-sidebar-pinned="true"] .sidebar .icon-pin { transform: rotate(90deg); }
 
 .sidebar-nav {
   flex: 1;
@@ -224,7 +226,7 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
   flex: 1;
 }
 .sidebar:hover .sidebar-label,
-.sidebar[data-pinned="true"] .sidebar-label {
+html[data-sidebar-pinned="true"] .sidebar .sidebar-label {
   opacity: 1;
   max-width: 14rem;
 }
@@ -251,8 +253,8 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
 }
 .sidebar:hover .sidebar-group-caret,
 .sidebar:hover .sidebar-pick-caret,
-.sidebar[data-pinned="true"] .sidebar-group-caret,
-.sidebar[data-pinned="true"] .sidebar-pick-caret { opacity: 1; }
+html[data-sidebar-pinned="true"] .sidebar .sidebar-group-caret,
+html[data-sidebar-pinned="true"] .sidebar .sidebar-pick-caret { opacity: 1; }
 .sidebar-group[data-open="true"] > .sidebar-group-head .sidebar-group-caret,
 .sidebar-pick[data-open="true"] > .sidebar-pick-head .sidebar-pick-caret {
   transform: rotate(90deg);
@@ -268,9 +270,9 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
 /* Submenus only ever expand when the rail is wide enough to show
    labels — collapsed rail keeps them hidden regardless of state. */
 .sidebar:hover .sidebar-group[data-open="true"] > .sidebar-group-body,
-.sidebar[data-pinned="true"] .sidebar-group[data-open="true"] > .sidebar-group-body,
+html[data-sidebar-pinned="true"] .sidebar .sidebar-group[data-open="true"] > .sidebar-group-body,
 .sidebar:hover .sidebar-pick[data-open="true"] > .sidebar-pick-body,
-.sidebar[data-pinned="true"] .sidebar-pick[data-open="true"] > .sidebar-pick-body {
+html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sidebar-pick-body {
   display: flex;
   flex-direction: column;
   gap: 2px;
