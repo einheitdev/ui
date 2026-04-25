@@ -1,0 +1,14 @@
+:root {
+  --einheit-bg: {{ bg }};
+  --einheit-bg1: {{ bg1 }};
+  --einheit-bg2: {{ bg2 }};
+  --einheit-fg: {{ fg }};
+  --einheit-fg2: {{ fg2 }};
+  --einheit-fg3: {{ fg3 }};
+  --einheit-good: {{ good }};
+  --einheit-warn: {{ warn }};
+  --einheit-bad: {{ bad }};
+  --einheit-info: {{ info }};
+  --einheit-border: {{ border }};
+  --einheit-accent: {{ accent }};
+}

@@ -1,0 +1,4 @@
+<section id="counter-card" class="card card-info">
+  <h2 class="card-title">counter</h2>
+  <div class="card-body" style="font-size:32px">{{ counter }}</div>
+</section>

@@ -1,0 +1,13 @@
+{% include "partials/card" %}
+{# The dashboard composes the counter card + a tick button.
+   Each render asks the framework's card partial to wrap the body. #}
+<section class="card">
+  <h2 class="card-title">example dashboard</h2>
+  <div class="card-body">
+    {% include "example/counter_card" %}
+    <form hx-post="/tick" hx-swap="outerHTML" hx-target="#counter-card"
+          style="margin-top:16px">
+      <button type="submit" class="btn-primary">tick</button>
+    </form>
+  </div>
+</section>

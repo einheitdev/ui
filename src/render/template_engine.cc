@@ -1,0 +1,119 @@
+/// @file template_engine.cc
+// Copyright (c) 2026 Einheit Networks
+
+#include "einheit/ui/render/template_engine.h"
+
+#include <filesystem>
+#include <format>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <inja/inja.hpp>
+#include <spdlog/spdlog.h>
+
+namespace einheit::ui::render {
+
+struct TemplateEngine::Impl {
+  TemplateEngineConfig cfg;
+  inja::Environment env;
+};
+
+namespace {
+
+auto MakeError(TemplateError code, std::string msg)
+    -> Error<TemplateError> {
+  return Error<TemplateError>{code, std::move(msg)};
+}
+
+}  // namespace
+
+TemplateEngine::TemplateEngine(TemplateEngineConfig cfg)
+    : impl_(std::make_unique<Impl>(Impl{std::move(cfg), {}})) {
+  // Inja's include resolver runs against a single base path. We
+  // configure it as the first search root and override `Resolve`
+  // ourselves so multi-root lookup works regardless.
+  if (!impl_->cfg.search_paths.empty()) {
+    impl_->env.set_search_included_templates_in_files(true);
+  }
+  impl_->env.set_html_autoescape(impl_->cfg.auto_escape);
+}
+
+TemplateEngine::~TemplateEngine() = default;
+
+TemplateEngine::TemplateEngine(TemplateEngine &&) noexcept = default;
+auto TemplateEngine::operator=(TemplateEngine &&) noexcept
+    -> TemplateEngine & = default;
+
+auto TemplateEngine::Resolve(std::string_view name) const
+    -> std::expected<std::string, Error<TemplateError>> {
+  const std::string n{name};
+  const std::string suffixed =
+      n.ends_with(impl_->cfg.default_suffix)
+          ? n
+          : n + impl_->cfg.default_suffix;
+  for (const auto &root : impl_->cfg.search_paths) {
+    auto candidate = std::filesystem::path(root) / suffixed;
+    std::error_code ec;
+    if (std::filesystem::exists(candidate, ec) && !ec) {
+      return candidate.string();
+    }
+  }
+  return std::unexpected(MakeError(
+      TemplateError::NotFound,
+      std::format("template '{}' not found in any search path", n)));
+}
+
+auto TemplateEngine::Render(std::string_view name,
+                            const nlohmann::json &ctx) const
+    -> std::expected<std::string, Error<TemplateError>> {
+  auto path = Resolve(name);
+  if (!path) return std::unexpected(path.error());
+  try {
+    if (impl_->cfg.hot_reload) {
+      // parse_template re-reads from disk every call; cheap enough
+      // for dev mode and avoids stale-template debugging.
+      auto tpl = impl_->env.parse_template(*path);
+      return impl_->env.render(tpl, ctx);
+    }
+    return impl_->env.render_file(*path, ctx);
+  } catch (const inja::ParserError &e) {
+    return std::unexpected(MakeError(
+        TemplateError::ParseFailed,
+        std::format("parse '{}': {}", *path, e.what())));
+  } catch (const inja::RenderError &e) {
+    return std::unexpected(MakeError(
+        TemplateError::RenderFailed,
+        std::format("render '{}': {}", *path, e.what())));
+  } catch (const inja::FileError &e) {
+    return std::unexpected(MakeError(
+        TemplateError::IoFailed,
+        std::format("read '{}': {}", *path, e.what())));
+  } catch (const std::exception &e) {
+    return std::unexpected(MakeError(
+        TemplateError::RenderFailed,
+        std::format("render '{}': {}", *path, e.what())));
+  }
+}
+
+auto TemplateEngine::RenderString(std::string_view source,
+                                  const nlohmann::json &ctx) const
+    -> std::expected<std::string, Error<TemplateError>> {
+  try {
+    return impl_->env.render(std::string{source}, ctx);
+  } catch (const inja::ParserError &e) {
+    return std::unexpected(MakeError(
+        TemplateError::ParseFailed,
+        std::format("parse inline: {}", e.what())));
+  } catch (const inja::RenderError &e) {
+    return std::unexpected(MakeError(
+        TemplateError::RenderFailed,
+        std::format("render inline: {}", e.what())));
+  } catch (const std::exception &e) {
+    return std::unexpected(MakeError(
+        TemplateError::RenderFailed,
+        std::format("render inline: {}", e.what())));
+  }
+}
+
+}  // namespace einheit::ui::render

@@ -1,0 +1,98 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro",
+               Menlo, Consolas, monospace;
+  background: var(--einheit-bg);
+  color: var(--einheit-fg);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.topnav {
+  background: var(--einheit-bg1);
+  padding: 12px 24px;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  border-bottom: 1px solid var(--einheit-border);
+}
+.topnav .brand {
+  color: var(--einheit-accent);
+  font-weight: bold;
+  font-size: 18px;
+  text-decoration: none;
+}
+.topnav .navlink {
+  color: var(--einheit-fg3);
+  text-decoration: none;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+}
+.topnav .navlink:hover { color: var(--einheit-fg); }
+.topnav .navlink.active {
+  color: var(--einheit-fg);
+  border-bottom-color: var(--einheit-accent);
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+.card {
+  background: var(--einheit-bg1);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--einheit-border);
+}
+.card-title {
+  font-size: 12px;
+  color: var(--einheit-fg3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+.card-good { border-left: 3px solid var(--einheit-good); }
+.card-warn { border-left: 3px solid var(--einheit-warn); }
+.card-bad  { border-left: 3px solid var(--einheit-bad); }
+.card-info { border-left: 3px solid var(--einheit-info); }
+
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left;
+  color: var(--einheit-fg3);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--einheit-border);
+}
+.data-table td {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--einheit-bg);
+  font-variant-numeric: tabular-nums;
+}
+.data-table .right  { text-align: right; }
+.data-table .center { text-align: center; }
+.data-table tr:hover {
+  background: color-mix(in srgb, var(--einheit-info) 6%, transparent);
+}
+
+.cell-good { color: var(--einheit-good); }
+.cell-warn { color: var(--einheit-warn); }
+.cell-bad  { color: var(--einheit-bad); }
+.cell-info { color: var(--einheit-info); }
+.cell-dim  { color: var(--einheit-fg3); }
+
+.badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.badge-good { background: color-mix(in srgb, var(--einheit-good) 15%, transparent); color: var(--einheit-good); }
+.badge-warn { background: color-mix(in srgb, var(--einheit-warn) 15%, transparent); color: var(--einheit-warn); }
+.badge-bad  { background: color-mix(in srgb, var(--einheit-bad)  15%, transparent); color: var(--einheit-bad); }
+.badge-info { background: color-mix(in srgb, var(--einheit-info) 15%, transparent); color: var(--einheit-info); }

@@ -1,0 +1,10 @@
+{# Card partial. Required: title (string), body (raw HTML).
+   Optional: id (DOM id), semantic ("good"|"warn"|"bad"|"info"). #}
+<section class="card{% if semantic %} card-{{ semantic }}{% endif %}"
+{% if id %}         id="{{ id }}"
+{% endif %}>
+  <h2 class="card-title">{{ title }}</h2>
+  <div class="card-body">
+    {{ body }}
+  </div>
+</section>

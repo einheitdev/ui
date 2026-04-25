@@ -1,0 +1,7 @@
+<section class="card card-bad">
+  <h2 class="card-title">error: {{ code }}</h2>
+  <p class="card-body">{{ message }}</p>
+{% if hint %}
+  <p class="card-hint">{{ hint }}</p>
+{% endif %}
+</section>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meta.title | default("einheit") }}</title>
+  <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/assets/htmx.min.js" defer></script>
+  <script src="/assets/htmx-ext-sse.js" defer></script>
+</head>
+<body hx-ext="sse" sse-connect="/events">
+  <nav class="topnav">
+    <a class="brand" href="/">{{ meta.brand | default("einheit") }}</a>
+{% if meta.nav %}
+{% for entry in meta.nav %}
+    <a href="{{ entry.href }}"
+       class="navlink{% if entry.slug == meta.active %} active{% endif %}">
+      {{ entry.label }}
+    </a>
+{% endfor %}
+{% endif %}
+  </nav>
+  <main class="container">
+    {{ body }}
+  </main>
+</body>
+</html>
