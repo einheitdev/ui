@@ -74,13 +74,23 @@ auto Render(const render::TemplateEngine &eng, ResponseFormat fmt,
             RouteError::TemplateFailed, inner.error().message));
       }
       nlohmann::json layout_ctx = nlohmann::json::object();
-      layout_ctx["body"] = *inner;
       layout_ctx["meta"] = args.meta;
       layout_ctx["data"] = args.data;
       auto page = eng.Render(args.layout, layout_ctx);
       if (!page) {
         return std::unexpected(MakeError(
             RouteError::TemplateFailed, page.error().message));
+      }
+      // The layout template carries a literal placeholder that we
+      // splice the rendered fragment into. Doing it post-render
+      // avoids fighting inja's autoescape over a value that is
+      // already trusted HTML — meta.* etc. still get escaped
+      // normally inside the layout render.
+      static constexpr std::string_view kBodyMarker =
+          "<!--EINHEIT_BODY-->";
+      if (auto pos = page->find(kBodyMarker);
+          pos != std::string::npos) {
+        page->replace(pos, kBodyMarker.size(), *inner);
       }
       crow::response r{200, *page};
       r.set_header("Content-Type", "text/html; charset=utf-8");

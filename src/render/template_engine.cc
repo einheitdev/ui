@@ -30,13 +30,23 @@ auto MakeError(TemplateError code, std::string msg)
 
 TemplateEngine::TemplateEngine(TemplateEngineConfig cfg)
     : impl_(std::make_unique<Impl>(Impl{std::move(cfg), {}})) {
-  // Inja's include resolver runs against a single base path. We
-  // configure it as the first search root and override `Resolve`
-  // ourselves so multi-root lookup works regardless.
-  if (!impl_->cfg.search_paths.empty()) {
-    impl_->env.set_search_included_templates_in_files(true);
-  }
+  // inja's default `{% include %}` resolves relative to the parent
+  // template's directory. That breaks cross-root composition (e.g.
+  // an adapter template including a framework partial), so we
+  // override the loader to walk our multi-root search path
+  // instead.
+  impl_->env.set_search_included_templates_in_files(true);
   impl_->env.set_html_autoescape(impl_->cfg.auto_escape);
+
+  impl_->env.set_include_callback(
+      [this](const std::filesystem::path & /*base*/,
+             const std::string &target) -> inja::Template {
+        auto resolved = Resolve(target);
+        if (!resolved) {
+          throw inja::FileError(resolved.error().message);
+        }
+        return impl_->env.parse_template(*resolved);
+      });
 }
 
 TemplateEngine::~TemplateEngine() = default;

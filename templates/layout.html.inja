@@ -22,7 +22,7 @@
 {% endif %}
   </nav>
   <main class="container">
-    {{ body }}
+    <!--EINHEIT_BODY-->
   </main>
 </body>
 </html>

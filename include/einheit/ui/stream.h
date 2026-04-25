@@ -50,6 +50,24 @@ struct TopicBinding {
   std::string swap_strategy = "outerHTML";
 };
 
+/// Wrap a rendered HTML body in HTMX's out-of-band swap container so
+/// the receiving browser swaps it into the existing element with id
+/// `binding.swap_target` using strategy `binding.swap_strategy`.
+/// Public so tests (and adapters that need to format their own
+/// payloads) can call it directly.
+/// @param body Rendered fragment HTML.
+/// @param binding Topic binding describing the swap target.
+/// @returns OOB-wrapped HTML.
+auto BuildOobWrapper(std::string_view body, const TopicBinding &binding)
+    -> std::string;
+
+/// Encode a payload as a Server-Sent Events `data:` frame. Multi-line
+/// payloads emit one `data:` line per line; the frame ends with a
+/// blank line per the SSE spec.
+/// @param payload Raw text to encode (typically OOB-wrapped HTML).
+/// @returns SSE wire-format frame.
+auto SseFrame(std::string_view payload) -> std::string;
+
 /// Live SSE channel mounted on a Crow app. Constructed once per
 /// product; survives the lifetime of the server.
 class EventStream {

@@ -33,10 +33,9 @@ struct Subscriber {
   std::function<void(const std::string &)> write_chunk;
 };
 
-/// Wrap a rendered HTML fragment in HTMX's out-of-band swap envelope
-/// so the browser swaps it into the existing element with the given
-/// id.
-auto WrapOob(const std::string &body, const TopicBinding &b)
+}  // namespace
+
+auto BuildOobWrapper(std::string_view body, const TopicBinding &b)
     -> std::string {
   return std::format(
       R"(<div hx-swap-oob="{}:#{}">{}</div>)"
@@ -44,27 +43,24 @@ auto WrapOob(const std::string &body, const TopicBinding &b)
       b.swap_strategy, b.swap_target, body);
 }
 
-/// SSE wire format: `data:` lines + blank-line terminator.
-auto SseFrame(const std::string &payload) -> std::string {
+auto SseFrame(std::string_view payload) -> std::string {
   std::string out;
   out.reserve(payload.size() + 16);
   std::size_t start = 0;
   while (start < payload.size()) {
     auto nl = payload.find('\n', start);
     auto line = payload.substr(
-        start, nl == std::string::npos ? std::string::npos
-                                       : nl - start);
+        start, nl == std::string_view::npos ? std::string_view::npos
+                                            : nl - start);
     out += "data: ";
     out += line;
     out += '\n';
-    if (nl == std::string::npos) break;
+    if (nl == std::string_view::npos) break;
     start = nl + 1;
   }
   out += '\n';
   return out;
 }
-
-}  // namespace
 
 struct EventStream::Impl {
   const render::TemplateEngine *eng;
@@ -107,7 +103,7 @@ auto EventStream::Publish(std::string_view topic,
     return std::unexpected(MakeError(
         StreamError::TemplateFailed, rendered.error().message));
   }
-  const auto frame = SseFrame(WrapOob(*rendered, binding));
+  const auto frame = SseFrame(BuildOobWrapper(*rendered, binding));
 
   std::vector<Subscriber> snap;
   {

@@ -56,47 +56,32 @@ auto MountStatic(crow::SimpleApp &app, std::string_view mount_at,
   if (!prefix.empty() && prefix.back() == '/') prefix.pop_back();
   const std::string route_pattern = prefix + "/<path>";
 
-  app.route_dynamic(route_pattern.c_str())
-      ([root, prefix](const crow::request & /*req*/,
-                      crow::response &res, const std::string &rel) {
+  app.route_dynamic(route_pattern)
+      ([root](std::string rel) {
         if (!IsSafeRel(rel)) {
-          res.code = 400;
-          res.body = "bad path";
-          res.end();
-          return;
+          return crow::response{400, "bad path"};
         }
         std::error_code ec;
-        auto candidate = std::filesystem::weakly_canonical(
-            root / rel, ec);
-        if (ec) {
-          res.code = 404;
-          res.end();
-          return;
-        }
+        auto candidate =
+            std::filesystem::weakly_canonical(root / rel, ec);
+        if (ec) return crow::response{404};
         const auto root_str_ = root.string();
         if (candidate.string().rfind(root_str_, 0) != 0) {
-          res.code = 403;
-          res.body = "forbidden";
-          res.end();
-          return;
+          return crow::response{403, "forbidden"};
         }
         if (!std::filesystem::is_regular_file(candidate, ec) || ec) {
-          res.code = 404;
-          res.end();
-          return;
+          return crow::response{404};
         }
-        res.body = ReadAll(candidate);
+        crow::response r{200, ReadAll(candidate)};
         const auto ext = candidate.extension().string();
-        if (auto it = MimeTable().find(ext);
-            it != MimeTable().end()) {
-          res.set_header("Content-Type", it->second);
+        if (auto it = MimeTable().find(ext); it != MimeTable().end()) {
+          r.set_header("Content-Type", it->second);
         } else {
-          res.set_header("Content-Type", "application/octet-stream");
+          r.set_header("Content-Type", "application/octet-stream");
         }
-        res.set_header("Cache-Control",
-                       "public, max-age=300, must-revalidate");
-        res.code = 200;
-        res.end();
+        r.set_header("Cache-Control",
+                     "public, max-age=300, must-revalidate");
+        return r;
       });
   spdlog::info("mounted static dir '{}' at '{}'", root.string(),
                prefix);

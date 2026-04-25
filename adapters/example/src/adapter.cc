@@ -51,8 +51,9 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
     auto *eng = ctx.templates;
     auto *events = ctx.events;
     auto nav = Nav();
+    auto &app = *ctx.app;
 
-    CROW_ROUTE(*ctx.app, "/")
+    CROW_ROUTE(app, "/")
     ([eng, this, nav](const crow::request &req) {
       ui::RenderArgs args;
       args.fragment = "example/dashboard";
@@ -73,10 +74,10 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
         return ui::RenderError(*eng, req, 500, "render_failed",
                                r.error().message);
       }
-      return *r;
+      return std::move(*r);
     });
 
-    CROW_ROUTE(*ctx.app, "/counters")
+    CROW_ROUTE(app, "/counters")
     ([eng, this](const crow::request &req) {
       ui::RenderArgs args;
       args.fragment = "example/counter_card";
@@ -88,10 +89,10 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
         return ui::RenderError(*eng, req, 500, "render_failed",
                                r.error().message);
       }
-      return *r;
+      return std::move(*r);
     });
 
-    CROW_ROUTE(*ctx.app, "/tick").methods("POST"_method)(
+    CROW_ROUTE(app, "/tick").methods("POST"_method)(
         [eng, events, this](const crow::request &req) {
           const auto next = ++counter_;
           if (auto pub = events->Publish("example.tick",
@@ -109,7 +110,7 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
             return ui::RenderError(*eng, req, 500, "render_failed",
                                    r.error().message);
           }
-          return *r;
+          return std::move(*r);
         });
   }
 
