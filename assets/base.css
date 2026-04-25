@@ -541,10 +541,10 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
    skip it so the unfocused cursor stays steady. */
 @keyframes einheit-cursor-fade {
   0%, 100% { opacity: 1; }
-  50%      { opacity: 0.35; }
+  50%      { opacity: 0.1; }
 }
 .xterm.focus .xterm-cursor:not(.xterm-cursor-outline) {
-  animation: einheit-cursor-fade 2.6s ease-in-out infinite;
+  animation: einheit-cursor-fade 3.5s ease-in-out infinite;
 }
 .editor-analysis {
   flex: 1;
