@@ -27,22 +27,46 @@
 
 namespace {
 
+/// Pick the first existing path from a candidate list. Falls back
+/// to the last candidate (typically the cwd-relative default) even
+/// if it doesn't exist so the caller still gets a useful error
+/// from the eventual filesystem op.
+auto FirstExisting(std::initializer_list<const char *> paths)
+    -> std::string {
+  const char *last = "";
+  for (const char *p : paths) {
+    if (!p || !*p) continue;
+    last = p;
+    if (std::filesystem::exists(p)) return p;
+  }
+  return last;
+}
+
 auto ResolveTemplatesDir(const std::string &override)
     -> std::string {
   if (!override.empty()) return override;
+  return FirstExisting({
 #ifdef EINHEIT_UI_TEMPLATES_DIR
-  if (std::filesystem::exists(EINHEIT_UI_TEMPLATES_DIR)) {
-    return EINHEIT_UI_TEMPLATES_DIR;
-  }
+      EINHEIT_UI_TEMPLATES_DIR,
 #endif
-  // Fallback for in-tree dev: ../../templates relative to the
-  // binary's source dir.
-  return "templates";
+#ifdef EINHEIT_UI_DEV_TEMPLATES_DIR
+      EINHEIT_UI_DEV_TEMPLATES_DIR,
+#endif
+      "templates",
+  });
 }
 
 auto ResolveAssetsDir(const std::string &override) -> std::string {
   if (!override.empty()) return override;
-  return "assets";
+  return FirstExisting({
+#ifdef EINHEIT_UI_INSTALLED_ASSETS_DIR
+      EINHEIT_UI_INSTALLED_ASSETS_DIR,
+#endif
+#ifdef EINHEIT_UI_DEV_ASSETS_DIR
+      EINHEIT_UI_DEV_ASSETS_DIR,
+#endif
+      "assets",
+  });
 }
 
 }  // namespace
