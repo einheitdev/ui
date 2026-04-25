@@ -97,6 +97,7 @@ auto main(int argc, char **argv) -> int {
   std::string shell_target;
   std::string shell_endpoint;
   std::string shell_event_endpoint;
+  bool shell_learn = false;
 
   app.add_option("--bind", bind_addr, "Bind address");
   app.add_option("--port", port, "TCP port");
@@ -142,6 +143,10 @@ auto main(int argc, char **argv) -> int {
                  "Optional --endpoint forwarded to cli");
   app.add_option("--shell-event-endpoint", shell_event_endpoint,
                  "Optional --event-endpoint forwarded to cli");
+  app.add_flag("--shell-learn", shell_learn,
+               "Spawn cli sessions in --learn mode (in-process "
+               "learning daemon — useful when no product daemon "
+               "is listening, e.g. demos)");
 
   try {
     app.parse(argc, argv);
@@ -228,6 +233,7 @@ auto main(int argc, char **argv) -> int {
     scfg2.cli_target = shell_target;
     scfg2.cli_endpoint = shell_endpoint;
     scfg2.cli_event_endpoint = shell_event_endpoint;
+    scfg2.cli_learn = shell_learn;
     if (auto r = einheit::adapters::shell::Mount(crow_app, engine,
                                                    scfg2);
         !r) {

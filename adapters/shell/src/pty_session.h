@@ -51,6 +51,7 @@ struct PtyLaunchSpec {
   std::string event_endpoint;
   std::string term = "xterm-256color";
   std::string lang = "C.UTF-8";
+  bool learn = false;
 };
 
 /// Per-session PTY bridge. One instance per WebSocket connection.

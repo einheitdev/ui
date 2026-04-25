@@ -109,6 +109,7 @@ auto Mount(crow::SimpleApp &app,
         spec.target = cfg.cli_target;
         spec.endpoint = cfg.cli_endpoint;
         spec.event_endpoint = cfg.cli_event_endpoint;
+        spec.learn = cfg.cli_learn;
 
         // Capturing &conn is safe — Crow guarantees the
         // connection outlives onopen/onmessage/onclose for this

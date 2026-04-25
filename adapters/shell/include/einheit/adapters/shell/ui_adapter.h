@@ -63,6 +63,10 @@ struct ShellConfig {
   std::string cli_endpoint;
   /// Optional --event-endpoint forwarded to the cli.
   std::string cli_event_endpoint;
+  /// Spawn each cli session in --learn mode (in-process learning
+  /// daemon). Useful for demos and dev when no real product
+  /// daemon is listening.
+  bool cli_learn = false;
 };
 
 /// Mount the shell page + WebSocket endpoint on `app`. Routes:

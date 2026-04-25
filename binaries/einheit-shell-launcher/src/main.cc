@@ -67,6 +67,10 @@ auto main(int argc, char **argv) -> int {
                  "Optional event-socket override");
   app.add_option("--workdir", a.workdir,
                  "Directory to chdir into before exec (default /tmp)");
+  app.add_flag("--learn", a.learn,
+               "Pass --learn to the cli (in-process learning "
+               "daemon — operator can drive configure/commit "
+               "without a real product daemon).");
   std::string term;
   std::string lang;
   app.add_option("--term", term,

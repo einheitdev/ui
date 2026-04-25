@@ -268,6 +268,7 @@ auto BuildCliArgv(const Args &args) -> std::vector<std::string> {
   std::vector<std::string> v;
   v.push_back(args.cli_path);
   v.push_back("--locked");
+  if (args.learn) v.push_back("--learn");
   if (!args.adapter.empty()) {
     v.push_back("--adapter");
     v.push_back(args.adapter);

@@ -78,6 +78,7 @@ auto BuildLauncherArgv(const PtyLaunchSpec &s)
     v.push_back("--lang");
     v.push_back(s.lang);
   }
+  if (s.learn) v.push_back("--learn");
   return v;
 }
 

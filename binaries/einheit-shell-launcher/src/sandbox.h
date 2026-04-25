@@ -58,6 +58,11 @@ struct Args {
   /// the cli. Defaults to /tmp so the cli can't observe the
   /// caller's cwd.
   std::string workdir = "/tmp";
+  /// Pass `--learn` to the cli. Spins up the in-process learning
+  /// daemon so the operator can drive configure/set/commit
+  /// without a real product daemon listening. Used in demos and
+  /// for the einheit-ui smoke test.
+  bool learn = false;
 };
 
 /// Apply resource limits the cli will inherit through execve.
