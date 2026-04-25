@@ -86,6 +86,14 @@ code, pre, kbd, samp {
   margin-left: 4rem;
   padding: 24px;
   max-width: 1200px;
+  transition: margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Pinned sidebar pushes content right so nothing is overlaid;
+   hover-expand stays an overlay (transient peek shouldn't
+   reflow the page). :has() keeps the rule colocated with the
+   layout instead of needing JS to mirror the state onto body. */
+body:has(.sidebar[data-pinned="true"]) .app-main {
+  margin-left: 17.5rem;
 }
 
 .sidebar {
