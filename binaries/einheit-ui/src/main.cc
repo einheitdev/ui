@@ -107,7 +107,7 @@ auto main(int argc, char **argv) -> int {
   }
 
   einheit::ui::EventStream events(engine);
-  events.Mount(crow_app, "/events");
+  events.Mount(crow_app);
 
   // Theme route — renders theme.css.inja with the selected palette.
   const auto theme = einheit::ui::NamedTheme(theme_name);

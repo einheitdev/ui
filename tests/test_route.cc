@@ -159,6 +159,28 @@ TEST(Render, PageSplicesFragmentIntoLayoutMarker) {
             std::string::npos);
 }
 
+TEST(Render, PageBackfillsMetaSoLayoutDoesNotErrorOnMissingKeys) {
+  TmpDir d;
+  d.WriteFile("inner.html.inja", "INNER");
+  // Layout iterates meta.nav and reads meta.title — both keys are
+  // entirely absent in the args.meta we pass in. The framework
+  // must default them so inja doesn't raise variable-not-found.
+  d.WriteFile(
+      "layout.html.inja",
+      "T={{ meta.title }};N=[{% for e in meta.nav %}{{ e.label }}{% endfor %}];"
+      "<!--EINHEIT_BODY-->");
+  auto eng = MakeEngine(d);
+  RenderArgs args;
+  args.fragment = "inner";
+  args.layout = "layout";
+  // args.meta intentionally left empty — backfill should kick in.
+  auto resp = Render(eng, ResponseFormat::Page, args);
+  ASSERT_TRUE(resp.has_value()) << resp.error().message;
+  EXPECT_NE(resp->body.find("T=einheit"), std::string::npos);
+  EXPECT_NE(resp->body.find("N=[]"), std::string::npos);
+  EXPECT_NE(resp->body.find("INNER"), std::string::npos);
+}
+
 TEST(Render, MissingFragmentSurfacesTemplateError) {
   TmpDir d;
   auto eng = MakeEngine(d);

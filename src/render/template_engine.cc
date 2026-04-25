@@ -58,15 +58,24 @@ auto TemplateEngine::operator=(TemplateEngine &&) noexcept
 auto TemplateEngine::Resolve(std::string_view name) const
     -> std::expected<std::string, Error<TemplateError>> {
   const std::string n{name};
-  const std::string suffixed =
-      n.ends_with(impl_->cfg.default_suffix)
-          ? n
-          : n + impl_->cfg.default_suffix;
+  // Candidate filenames to try, in order. The default-suffix path
+  // (e.g. "partials/card" -> "partials/card.html.inja") wins on
+  // first hit; the bare ".inja" alternate handles non-HTML
+  // templates like "theme.css.inja"; the literal name handles
+  // callers that already pass a full filename.
+  std::vector<std::string> candidates;
+  if (!n.ends_with(".inja")) {
+    candidates.push_back(n + impl_->cfg.default_suffix);
+    candidates.push_back(n + ".inja");
+  }
+  candidates.push_back(n);
   for (const auto &root : impl_->cfg.search_paths) {
-    auto candidate = std::filesystem::path(root) / suffixed;
-    std::error_code ec;
-    if (std::filesystem::exists(candidate, ec) && !ec) {
-      return candidate.string();
+    for (const auto &cand : candidates) {
+      auto path = std::filesystem::path(root) / cand;
+      std::error_code ec;
+      if (std::filesystem::exists(path, ec) && !ec) {
+        return path.string();
+      }
     }
   }
   return std::unexpected(MakeError(

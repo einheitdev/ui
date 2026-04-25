@@ -1,20 +1,17 @@
 /// @file stream.cc
-/// @brief SSE event-stream implementation. The connection-management
-/// loop is intentionally a sketch — Crow's streaming-response API
-/// has version drift, so the broadcast hook is wired through a
-/// std::function that the Mount() variant in active use binds to a
-/// concrete Crow streaming primitive.
+/// @brief WebSocket-backed EventStream. Connections are tracked in
+/// a guarded set; Publish renders the bound fragment, wraps it for
+/// HTMX out-of-band swap, and fans out via `connection::send_text`.
 // Copyright (c) 2026 Einheit Networks
 
 #include "einheit/ui/stream.h"
 
-#include <chrono>
 #include <format>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -26,48 +23,20 @@ auto MakeError(StreamError code, std::string msg)
   return Error<StreamError>{code, std::move(msg)};
 }
 
-/// One connected SSE client. Holds a writer callback the framework
-/// invokes per published event.
-struct Subscriber {
-  std::uint64_t id = 0;
-  std::function<void(const std::string &)> write_chunk;
-};
-
 }  // namespace
 
 auto BuildOobWrapper(std::string_view body, const TopicBinding &b)
     -> std::string {
   return std::format(
-      R"(<div hx-swap-oob="{}:#{}">{}</div>)"
-      "\n",
+      R"(<div hx-swap-oob="{}:#{}">{}</div>)",
       b.swap_strategy, b.swap_target, body);
-}
-
-auto SseFrame(std::string_view payload) -> std::string {
-  std::string out;
-  out.reserve(payload.size() + 16);
-  std::size_t start = 0;
-  while (start < payload.size()) {
-    auto nl = payload.find('\n', start);
-    auto line = payload.substr(
-        start, nl == std::string_view::npos ? std::string_view::npos
-                                            : nl - start);
-    out += "data: ";
-    out += line;
-    out += '\n';
-    if (nl == std::string_view::npos) break;
-    start = nl + 1;
-  }
-  out += '\n';
-  return out;
 }
 
 struct EventStream::Impl {
   const render::TemplateEngine *eng;
   std::unordered_map<std::string, TopicBinding> bindings;
   mutable std::mutex mu;
-  std::vector<Subscriber> subscribers;
-  std::uint64_t next_id = 1;
+  std::unordered_set<crow::websocket::connection *> connections;
 };
 
 EventStream::EventStream(const render::TemplateEngine &eng)
@@ -103,46 +72,55 @@ auto EventStream::Publish(std::string_view topic,
     return std::unexpected(MakeError(
         StreamError::TemplateFailed, rendered.error().message));
   }
-  const auto frame = SseFrame(BuildOobWrapper(*rendered, binding));
+  const auto frame = BuildOobWrapper(*rendered, binding);
 
-  std::vector<Subscriber> snap;
+  // Snapshot the subscriber set so we don't hold the lock across
+  // socket I/O. send_text on a closing connection is safe per
+  // Crow's contract — we'll see the eventual onclose and remove it.
+  std::vector<crow::websocket::connection *> snap;
   {
     std::lock_guard<std::mutex> lock(impl_->mu);
-    snap = impl_->subscribers;
+    snap.reserve(impl_->connections.size());
+    for (auto *c : impl_->connections) snap.push_back(c);
   }
-  for (auto &s : snap) {
-    if (s.write_chunk) s.write_chunk(frame);
-  }
+  for (auto *c : snap) c->send_text(frame);
   return {};
 }
 
-auto EventStream::Mount(crow::SimpleApp &app, std::string_view path)
-    -> void {
-  // TODO(stream): replace with the streaming-response form actually
-  // exposed by the Crow version we pin in fetch.cmake. The shape:
-  //   - set Content-Type: text/event-stream
-  //   - register a Subscriber with a write_chunk callback
-  //   - on disconnect, deregister the subscriber
-  //   - emit a heartbeat comment ":heartbeat\n\n" every 15s
-  // This stub keeps the build green while the API choice is
-  // finalised.
-  const std::string p{path};
-  CROW_ROUTE(app, "/_stream_unbound")
-  ([p]() {
-    spdlog::warn(
-        "EventStream::Mount stub hit; SSE endpoint '{}' not "
-        "wired yet",
-        p);
-    crow::response r{503, "SSE endpoint not implemented in this build"};
-    r.set_header("Content-Type", "text/plain; charset=utf-8");
-    return r;
-  });
-  spdlog::info("EventStream mount placeholder for path '{}'", p);
+auto EventStream::OnOpen(crow::websocket::connection &conn) -> void {
+  std::lock_guard<std::mutex> lock(impl_->mu);
+  impl_->connections.insert(&conn);
+  spdlog::debug("ws open from {} ({} total)",
+                conn.get_remote_ip(), impl_->connections.size());
+}
+
+auto EventStream::OnClose(crow::websocket::connection &conn) -> void {
+  std::lock_guard<std::mutex> lock(impl_->mu);
+  impl_->connections.erase(&conn);
+  spdlog::debug("ws close ({} remaining)",
+                impl_->connections.size());
+}
+
+auto EventStream::Mount(crow::SimpleApp &app) -> void {
+  CROW_WEBSOCKET_ROUTE(app, "/events")
+      .onopen([this](crow::websocket::connection &conn) {
+        OnOpen(conn);
+      })
+      .onclose([this](crow::websocket::connection &conn,
+                      const std::string & /*reason*/,
+                      uint16_t /*code*/) { OnClose(conn); })
+      .onmessage([](crow::websocket::connection & /*conn*/,
+                    const std::string & /*data*/,
+                    bool /*is_binary*/) {
+        // Server-to-browser only by default. Adapters that want to
+        // accept inbound messages register their own ws route with
+        // a custom onmessage and forward open/close to OnOpen/OnClose.
+      });
 }
 
 auto EventStream::SubscriberCount() const -> std::size_t {
   std::lock_guard<std::mutex> lock(impl_->mu);
-  return impl_->subscribers.size();
+  return impl_->connections.size();
 }
 
 }  // namespace einheit::ui

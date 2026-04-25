@@ -73,8 +73,21 @@ auto Render(const render::TemplateEngine &eng, ResponseFormat fmt,
         return std::unexpected(MakeError(
             RouteError::TemplateFailed, inner.error().message));
       }
+      // Backfill the meta keys the shared layout reads. inja raises
+      // on missing variable access (no Jinja-style `is defined`),
+      // so the framework guarantees these exist even when the
+      // adapter didn't bother. Adapter-supplied values win; only
+      // absent keys get a default.
+      nlohmann::json meta = args.meta.is_object()
+                                ? args.meta
+                                : nlohmann::json::object();
+      if (!meta.contains("title")) meta["title"] = "einheit";
+      if (!meta.contains("brand")) meta["brand"] = "einheit";
+      if (!meta.contains("active")) meta["active"] = "";
+      if (!meta.contains("nav"))
+        meta["nav"] = nlohmann::json::array();
       nlohmann::json layout_ctx = nlohmann::json::object();
-      layout_ctx["meta"] = args.meta;
+      layout_ctx["meta"] = std::move(meta);
       layout_ctx["data"] = args.data;
       auto page = eng.Render(args.layout, layout_ctx);
       if (!page) {

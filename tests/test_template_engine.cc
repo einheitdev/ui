@@ -140,6 +140,18 @@ TEST(TemplateEngine, RenderStringInline) {
   EXPECT_EQ(*out, "x=42");
 }
 
+TEST(TemplateEngine, ResolvesNonHtmlTemplatesEndingInInja) {
+  TmpDir d;
+  d.WriteFile("theme.css.inja", ":root { --x: {{ x }}; }");
+  TemplateEngineConfig cfg;
+  cfg.search_paths = {d.Path()};
+  TemplateEngine eng(std::move(cfg));
+
+  auto out = eng.Render("theme.css", {{"x", "red"}});
+  ASSERT_TRUE(out.has_value()) << out.error().message;
+  EXPECT_NE(out->find("--x: red"), std::string::npos);
+}
+
 TEST(TemplateEngine, ResolveProducesAbsolutePath) {
   TmpDir d;
   d.WriteFile("foo.html.inja", "ok");

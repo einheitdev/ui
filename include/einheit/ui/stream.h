@@ -1,13 +1,18 @@
 /// @file stream.h
-/// @brief Server-Sent Events bridge. Adapters subscribe a topic to a
-/// fragment template at startup; later, code that mutates state
-/// calls Publish() with a JSON context and the framework renders the
-/// fragment and pushes it to every connected browser as an SSE
-/// `message` whose body is `<div hx-swap-oob=...>...</div>` so HTMX
-/// performs an out-of-band swap into the named target.
+/// @brief WebSocket-based live update channel. Adapters subscribe a
+/// topic to a fragment template at startup; later, code that mutates
+/// state calls Publish() with a JSON context and the framework
+/// renders the fragment, wraps it in HTMX's `hx-swap-oob` envelope,
+/// and broadcasts it over the WebSocket connection. HTMX's
+/// `htmx-ext-ws` extension performs the out-of-band swap on receipt.
 ///
-/// The push path is the default for live updates; HTMX polling stays
-/// available as an escape hatch for surfaces where push is overkill.
+/// We picked WebSocket over SSE because Crow's response model
+/// buffers the body until `end()` and has no flush primitive, so
+/// proper SSE would require either a Crow fork or socket-hijack
+/// gymnastics. Crow ships first-class `CROW_WEBSOCKET_ROUTE` with
+/// onopen/onclose/onmessage hooks and `connection::send_text(...)`
+/// callable from any thread, which fits the framework's
+/// "default to push" stance without compromise.
 // Copyright (c) 2026 Einheit Networks
 
 #ifndef INCLUDE_EINHEIT_UI_STREAM_H_
@@ -19,6 +24,7 @@
 #include <string_view>
 
 #include <crow.h>
+#include <crow/websocket.h>
 #include <nlohmann/json.hpp>
 
 #include "einheit/ui/error.h"
@@ -26,7 +32,7 @@
 
 namespace einheit::ui {
 
-/// Errors raised by the SSE stream layer.
+/// Errors raised by the WebSocket stream layer.
 enum class StreamError {
   /// Unknown topic — Publish() called before Bind().
   UnknownTopic,
@@ -61,15 +67,8 @@ struct TopicBinding {
 auto BuildOobWrapper(std::string_view body, const TopicBinding &binding)
     -> std::string;
 
-/// Encode a payload as a Server-Sent Events `data:` frame. Multi-line
-/// payloads emit one `data:` line per line; the frame ends with a
-/// blank line per the SSE spec.
-/// @param payload Raw text to encode (typically OOB-wrapped HTML).
-/// @returns SSE wire-format frame.
-auto SseFrame(std::string_view payload) -> std::string;
-
-/// Live SSE channel mounted on a Crow app. Constructed once per
-/// product; survives the lifetime of the server.
+/// Live WebSocket channel. Constructed once per product; survives
+/// the lifetime of the server.
 class EventStream {
  public:
   /// @param eng Template engine used to render fragments.
@@ -87,20 +86,33 @@ class EventStream {
 
   /// Push an event. Renders `binding.fragment` with `ctx`, wraps it
   /// for HTMX out-of-band swap, and writes it to every connected
-  /// SSE subscriber.
+  /// WebSocket subscriber.
   /// @param topic Topic name; must have been Bind()ed.
   /// @param ctx JSON context for the fragment.
   /// @returns void on success or StreamError.
   auto Publish(std::string_view topic, const nlohmann::json &ctx)
       -> std::expected<void, Error<StreamError>>;
 
-  /// Mount the SSE endpoint onto a Crow app at `path`. Browsers open
-  /// `new EventSource(path)` here. The handler holds the connection
-  /// open; the framework writes a heartbeat comment every 15s to
-  /// keep proxies from timing the connection out.
+  /// Mount the WebSocket endpoint at the canonical `/events` path.
+  /// Browsers connect via HTMX's `ws-ext` (`hx-ext="ws"
+  /// ws-connect="/events"` on the body). The handler tracks the
+  /// connection and routes Publish() output to it for the
+  /// connection's lifetime.
   /// @param app Crow app.
-  /// @param path Public URL path (e.g. "/events").
-  auto Mount(crow::SimpleApp &app, std::string_view path) -> void;
+  auto Mount(crow::SimpleApp &app) -> void;
+
+  /// Connection lifecycle hooks for adapters that want to register
+  /// a WebSocket route at a non-default path. Wire them as the
+  /// `.onopen()` and `.onclose()` callbacks of a
+  /// `CROW_WEBSOCKET_ROUTE` block. `OnMessage` is intentionally
+  /// absent — the default channel is server-to-browser only;
+  /// adapters that want bidirectional traffic install their own
+  /// `.onmessage()`.
+  /// @param conn Connection that just connected.
+  auto OnOpen(crow::websocket::connection &conn) -> void;
+
+  /// @param conn Connection that just disconnected.
+  auto OnClose(crow::websocket::connection &conn) -> void;
 
   /// Number of currently connected subscribers. Useful in metrics.
   auto SubscriberCount() const -> std::size_t;

@@ -7,9 +7,9 @@
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/theme.css">
   <script src="/assets/htmx.min.js" defer></script>
-  <script src="/assets/htmx-ext-sse.js" defer></script>
+  <script src="/assets/htmx-ext-ws.js" defer></script>
 </head>
-<body hx-ext="sse" sse-connect="/events">
+<body hx-ext="ws" ws-connect="/events">
   <nav class="topnav">
     <a class="brand" href="/">{{ meta.brand | default("einheit") }}</a>
 {% if meta.nav %}

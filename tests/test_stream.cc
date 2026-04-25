@@ -1,8 +1,8 @@
 /// @file test_stream.cc
-/// @brief SSE wire-format helpers + EventStream Bind/Publish path.
-/// Connection management (Mount) is exercised by integration tests
-/// once Crow's streaming-response API is pinned; this file targets
-/// what's pure.
+/// @brief OOB-wrapping helper + EventStream Bind/Publish path. The
+/// WebSocket plumbing (Mount, OnOpen, OnClose) needs a real Crow
+/// app + a TCP loopback to exercise; that's the integration tier.
+/// This file targets what's pure.
 // Copyright (c) 2026 Einheit Networks
 
 #include <filesystem>
@@ -81,31 +81,12 @@ TEST(BuildOobWrapper, HonoursStrategyOverride) {
             std::string::npos);
 }
 
-TEST(SseFrame, SingleLinePayload) {
-  const auto out = SseFrame("hello");
-  EXPECT_EQ(out, "data: hello\n\n");
-}
-
-TEST(SseFrame, MultiLinePayloadEmitsOneDataLinePerLine) {
-  const auto out = SseFrame("a\nb\nc");
-  EXPECT_EQ(out, "data: a\ndata: b\ndata: c\n\n");
-}
-
-TEST(SseFrame, EmptyPayloadStillTerminates) {
-  const auto out = SseFrame("");
-  EXPECT_EQ(out, "\n");
-}
-
-TEST(SseFrame, OobWrappedFragmentSurvivesEncoding) {
-  const auto wrapped =
-      BuildOobWrapper("<p>hi</p>", MakeBinding("t", "f", "x"));
-  const auto frame = SseFrame(wrapped);
-  // Frame ends in a blank line.
-  ASSERT_GE(frame.size(), 2u);
-  EXPECT_EQ(frame.substr(frame.size() - 2), "\n\n");
-  // First line carries the swap container.
-  EXPECT_NE(frame.find("data: <div hx-swap-oob"),
+TEST(BuildOobWrapper, RendersCleanlyWhenBodyEmpty) {
+  const auto out =
+      BuildOobWrapper("", MakeBinding("t", "f", "anchor"));
+  EXPECT_NE(out.find(R"(hx-swap-oob="outerHTML:#anchor")"),
             std::string::npos);
+  EXPECT_NE(out.find("></div>"), std::string::npos);
 }
 
 TEST(EventStream, PublishUnknownTopicReturnsError) {
@@ -132,6 +113,15 @@ TEST(EventStream, PublishWithBoundTopicSucceedsEvenWithNoSubscribers) {
 
   auto r = stream.Publish("counter.tick", {{"count", 7}});
   ASSERT_TRUE(r.has_value()) << r.error().message;
+  EXPECT_EQ(stream.SubscriberCount(), 0u);
+}
+
+TEST(EventStream, SubscriberCountStartsAtZero) {
+  TmpDir d;
+  render::TemplateEngineConfig cfg;
+  cfg.search_paths = {d.Path()};
+  render::TemplateEngine eng(std::move(cfg));
+  EventStream stream(eng);
   EXPECT_EQ(stream.SubscriberCount(), 0u);
 }
 

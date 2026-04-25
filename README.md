@@ -2,9 +2,9 @@
 
 Shared C++ web UI framework for every Einheit Networks product.
 
-REST + server-rendered HTML fragments (HTMX) + SSE for live updates.
-Sibling of [einheit-cli](https://github.com/einheitdev/cli) — one
-framework, many product adapters.
+REST + server-rendered HTML fragments (HTMX) + WebSocket for live
+updates. Sibling of [einheit-cli](https://github.com/einheitdev/cli)
+— one framework, many product adapters.
 
 Licensed under the MIT License.
 
@@ -45,14 +45,14 @@ commands in [`assets/README.note`](assets/README.note).
 ```
 
 Open <http://127.0.0.1:7542/> for the example dashboard. `POST /tick`
-bumps the counter; an SSE push swaps the counter card in every
+bumps the counter; a WebSocket push swaps the counter card in every
 connected browser.
 
 ## Layout
 
 - `include/einheit/ui/` — public framework headers
   - `route.h` — `Render`, `DetectFormat`, `RenderError`
-  - `stream.h` — `EventStream` (SSE bridge, topic→fragment bindings)
+  - `stream.h` — `EventStream` (WebSocket bridge, topic→fragment bindings)
   - `adapter.h` — `ProductUiAdapter` contract
   - `theme.h` — semantic palette → CSS custom properties
   - `server.h` — Crow bring-up + TLS
@@ -129,7 +129,10 @@ framework partial.
 
 ## Live updates
 
-Default to SSE push; polling stays available as an escape hatch.
+Default to WebSocket push; polling stays available as an escape
+hatch. The server exposes a single `/events` WebSocket; HTMX's
+`htmx-ext-ws` extension consumes the messages and applies the
+out-of-band swap.
 
 ```cpp
 // At Mount() time:
@@ -144,8 +147,8 @@ ctx.events->Publish("f.rules.changed",
                     {{"rules", current_rules}});
 ```
 
-The framework renders the fragment and pushes an HTMX out-of-band
-swap to every connected browser.
+The framework renders the fragment, wraps it for HTMX out-of-band
+swap, and broadcasts to every connected browser.
 
 ## Status
 
@@ -153,11 +156,11 @@ Skeleton stage.
 
 Working: template engine with multi-root search and hot reload,
 route format detection, themed CSS, static asset mount with
-path-traversal guards, example adapter exercising all three
-response shapes plus an SSE publish, SSE wire format and OOB
-wrapping.
+path-traversal guards, WebSocket-backed `EventStream` with
+topic→fragment bindings and OOB-swap broadcast, example adapter
+exercising every response shape plus a live tick, 53 unit tests.
 
-Stub: connection management inside `stream.cc:Mount` returns 503
-until the Crow streaming-response API is pinned. Tests directory
-not yet populated. `htmx*.js` and `uplot.*` are not vendored —
-see `assets/README.note`.
+TODO: vendor `htmx.min.js`, `htmx-ext-ws.js`, `uplot` from the
+pinned URLs in `assets/README.note`. Port the rest of the
+cli-side themes (ocean, forest, solarized, high-contrast). End-
+to-end integration tests against a running Crow server.

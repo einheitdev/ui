@@ -8,8 +8,8 @@ Guidance for Claude Code working in this repository.
 product's operator UI links against. Sibling of `einheit-cli`.
 
 The framework is REST + server-rendered HTML fragments (HTMX) +
-SSE for live updates. JavaScript on the wire stays under ~100 KB
-gzipped. React was explicitly rejected on perf grounds.
+WebSocket for live updates. JavaScript on the wire stays under
+~100 KB gzipped. React was explicitly rejected on perf grounds.
 
 Each product daemon owns its data and exposes it through Crow
 routes; the framework supplies the template engine, theme, route
@@ -47,7 +47,7 @@ GoogleTest.
   - `error.h` — `Error<E>` template paired with `std::expected`
   - `theme.h` — semantic palette (mirrors cli/render/theme.h)
   - `route.h` — `Render`, `DetectFormat`, `RenderError`
-  - `stream.h` — `EventStream`, `TopicBinding` (SSE bridge)
+  - `stream.h` — `EventStream`, `TopicBinding` (WebSocket bridge)
   - `server.h` — Crow bring-up + TLS
   - `static_files.h` — safe `/assets` mount
   - `adapter.h` — `ProductUiAdapter` contract
@@ -96,13 +96,19 @@ GoogleTest.
 
 ## Live updates
 
-- Default to SSE push, not HTMX polling. The framework's stance:
-  having ditched SPA bloat, we can afford the more-engineered
-  primitive.
+- Default to WebSocket push, not HTMX polling. The framework's
+  stance: having ditched SPA bloat, we can afford the more-
+  engineered primitive.
+- The server exposes one WebSocket at `/events`. HTMX's `ws-ext`
+  consumes messages and performs OOB swaps; the framework formats
+  every Publish as `<div hx-swap-oob="strategy:#target">...</div>`
+  via `BuildOobWrapper`.
+- We picked WebSocket over SSE because Crow's response model
+  buffers the body until `end()` and has no flush primitive — true
+  SSE would require a Crow fork. WebSocket is first-class in Crow
+  via `CROW_WEBSOCKET_ROUTE`.
 - Bind once per topic at adapter `Mount` time, then `Publish` from
-  whatever code mutates state. Each `Publish` renders the bound
-  fragment and pushes one HTMX out-of-band swap to every connected
-  browser.
+  whatever code mutates state.
 - HTMX polling stays available (`hx-trigger="every 5s"`) for
   surfaces where push genuinely doesn't fit.
 
