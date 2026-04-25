@@ -446,6 +446,41 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
 }
 
 /* ---------------------------------------------------------------
+   Realtime plots. <figure class="plot"> with a .plot-caption
+   and a .plot-host (where uPlot renders). The host fills the
+   figure minus the caption row; uPlot's resize observer keeps
+   it in sync with sidebar pin/unpin width changes.
+   --------------------------------------------------------------- */
+.plot {
+  margin: 0 0 16px 0;
+  background: var(--einheit-bg1);
+  border: 1px solid var(--einheit-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+.plot-caption {
+  padding: 8px 12px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--einheit-fg3);
+  font-weight: 500;
+  border-bottom: 1px solid var(--einheit-border);
+}
+.plot-host {
+  flex: 1;
+  min-height: 120px;
+  padding: 8px;
+}
+.plot-host .uplot, .plot-host .u-wrap { width: 100%; }
+.plot-host .u-legend {
+  font-family: var(--einheit-font-mono);
+  font-size: 11px;
+  color: var(--einheit-fg2);
+}
+
+/* ---------------------------------------------------------------
    Editor page. Source pane (CM6) on the left, analysis pane on
    the right. Both panes share the same card chrome as the rest
    of the UI; CM6's own editor styling lives inside #editor-source

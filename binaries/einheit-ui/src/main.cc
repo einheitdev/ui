@@ -222,6 +222,7 @@ auto main(int argc, char **argv) -> int {
 
   einheit::ui::EventStream events(engine);
   events.Mount(crow_app);
+  events.MountMetrics(crow_app);
 
   // Theme route — renders theme.css.inja with the palette the
   // request asks for. Precedence: ?name= query > einheit_theme

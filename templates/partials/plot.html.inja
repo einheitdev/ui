@@ -1,0 +1,50 @@
+{# Realtime plot partial. Mounts a uPlot chart bound to a
+   server-side topic; new datapoints arrive over /metrics/ws and
+   plot.js appends them in-place.
+
+   The partial expects a single `plot` object at top level so a
+   page can render multiple plots by `{% set plot = ... %}` before
+   each `{% include "partials/plot" %}` (inja has no `{% with %}`,
+   so we lean on `set` to control the scope).
+
+   plot.topic    — server topic this plot subscribes to
+   plot.title    — caption shown above the chart
+   plot.y_label  — axis label (e.g. "bytes/s")
+   plot.window_s — visible time window in seconds
+   plot.series   — array of {label, semantic} where semantic is
+                   one of good|warn|bad|info|accent and selects the
+                   stroke color from the framework's --einheit-* vars
+   plot.points   — JSON array of historic datapoints used to hydrate
+                   the chart at render time. Each point is
+                   [ts_seconds, y0, y1, ...] matching `series` order.
+                   Pass an empty array when there's no history yet.
+   plot.height   — host pixel height (default 180)
+
+   Example caller (C++ adapter handler):
+
+     args.data["throughput_plot"] = {
+         {"topic", "hd.io_bps"},
+         ...
+         {"points", events->RecentPoints("hd.io_bps")},
+     };
+
+   Example caller (template):
+
+     {% set plot = throughput_plot %}
+     {% include "partials/plot" %}
+
+   inja's autoescape converts the JSON's `"` to `&quot;` inside
+   the attribute, which the HTML parser un-escapes when reading
+   the attribute — JSON.parse on the JS side then sees the
+   original JSON. #}
+<figure class="plot"
+        data-topic="{{ plot.topic }}"
+        data-window-s="{{ plot.window_s }}"
+        data-y-label="{{ plot.y_label }}"
+        data-series="{{ plot.series }}"
+        data-points="{{ plot.points }}"
+        style="height: {{ plot.height | default(180) }}px"
+        aria-label="{{ plot.title }}">
+  <figcaption class="plot-caption">{{ plot.title }}</figcaption>
+  <div class="plot-host"></div>
+</figure>

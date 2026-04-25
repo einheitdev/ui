@@ -6,12 +6,14 @@
 
 #include "einheit/ui/stream.h"
 
+#include <deque>
 #include <format>
 #include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -37,6 +39,11 @@ struct EventStream::Impl {
   std::unordered_map<std::string, TopicBinding> bindings;
   mutable std::mutex mu;
   std::unordered_set<crow::websocket::connection *> connections;
+  // Metric stream — separate connection set + per-topic ring
+  // buffer. Lives behind the same mutex as `connections`/
+  // `bindings` because publish hot-paths only need one lock.
+  std::unordered_set<crow::websocket::connection *> metric_conns;
+  std::unordered_map<std::string, std::deque<nlohmann::json>> ring;
 };
 
 EventStream::EventStream(const render::TemplateEngine &eng)
@@ -121,6 +128,55 @@ auto EventStream::Mount(crow::SimpleApp &app) -> void {
 auto EventStream::SubscriberCount() const -> std::size_t {
   std::lock_guard<std::mutex> lock(impl_->mu);
   return impl_->connections.size();
+}
+
+auto EventStream::PublishData(std::string_view topic,
+                              const nlohmann::json &point) -> void {
+  // Append to ring buffer, prune to capacity, snapshot the
+  // metric subscriber set, broadcast outside the lock.
+  nlohmann::json frame;
+  frame["type"] = "data";
+  frame["topic"] = std::string{topic};
+  frame["point"] = point;
+  const auto serialized = frame.dump();
+
+  std::vector<crow::websocket::connection *> snap;
+  {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    auto &q = impl_->ring[std::string{topic}];
+    q.push_back(point);
+    while (q.size() > kRingCapacity) q.pop_front();
+    snap.reserve(impl_->metric_conns.size());
+    for (auto *c : impl_->metric_conns) snap.push_back(c);
+  }
+  for (auto *c : snap) c->send_text(serialized);
+}
+
+auto EventStream::RecentPoints(std::string_view topic) const
+    -> nlohmann::json {
+  nlohmann::json out = nlohmann::json::array();
+  std::lock_guard<std::mutex> lock(impl_->mu);
+  auto it = impl_->ring.find(std::string{topic});
+  if (it == impl_->ring.end()) return out;
+  for (const auto &p : it->second) out.push_back(p);
+  return out;
+}
+
+auto EventStream::MountMetrics(crow::SimpleApp &app) -> void {
+  CROW_WEBSOCKET_ROUTE(app, "/metrics/ws")
+      .onopen([this](crow::websocket::connection &conn) {
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        impl_->metric_conns.insert(&conn);
+      })
+      .onclose([this](crow::websocket::connection &conn,
+                      const std::string &, uint16_t) {
+        std::lock_guard<std::mutex> lock(impl_->mu);
+        impl_->metric_conns.erase(&conn);
+      })
+      .onmessage([](crow::websocket::connection &,
+                    const std::string &, bool) {
+        // Server-to-browser only.
+      });
 }
 
 }  // namespace einheit::ui

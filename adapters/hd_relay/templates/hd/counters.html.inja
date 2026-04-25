@@ -1,3 +1,11 @@
+{# Realtime plots — server publishes to hd.io_bps and
+   hd.fwd_per_sec at 1Hz; the partial hydrates with what's
+   already in the ring buffer. #}
+{% set plot = throughput_plot %}
+{% include "partials/plot" %}
+{% set plot = forwards_plot %}
+{% include "partials/plot" %}
+
 <section class="card">
   <h2 class="card-title">totals</h2>
   <div class="card-body">

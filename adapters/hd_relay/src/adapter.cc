@@ -7,9 +7,13 @@
 
 #include "einheit/adapters/hd_relay/ui_adapter.h"
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <format>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -183,6 +187,11 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
   explicit HdRelayUiAdapter(HdClientConfig cfg)
       : client_(std::move(cfg)) {}
 
+  ~HdRelayUiAdapter() override {
+    sampler_stop_.store(true);
+    if (sampler_.joinable()) sampler_.join();
+  }
+
   auto Slug() const -> std::string override { return "hd-relay"; }
   auto DisplayName() const -> std::string override {
     return "hyper-derp";
@@ -202,7 +211,10 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
   auto Mount(ui::AdapterContext ctx) -> void override {
     auto *eng = ctx.templates;
     auto &app = *ctx.app;
+    auto *events = ctx.events;
     auto nav = Nav();
+
+    StartSampler(events);
     auto add_meta = [nav, this](nlohmann::json &meta,
                                 std::string title,
                                 std::string active) {
@@ -318,7 +330,7 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
             });
 
     CROW_ROUTE(app, "/counters")
-    ([eng, this, add_meta](const crow::request &req) {
+    ([eng, events, this, add_meta](const crow::request &req) {
       auto counters = client_.Get("/api/v1/counters");
       if (!counters) {
         return ui::RenderError(*eng, req, 502, "hd_unreachable",
@@ -328,6 +340,31 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
       args.fragment = "hd/counters";
       args.layout = "layout";
       args.data = CountersContext(*counters);
+      // Hydrate plots with whatever the sampler has gathered
+      // since startup. plot.js takes over from there over the
+      // /metrics/ws push channel.
+      args.data["throughput_plot"] = {
+          {"topic", "hd.io_bps"},
+          {"title", "throughput (bytes/s)"},
+          {"y_label", "B/s"},
+          {"window_s", 300},
+          {"series",
+           {{{"label", "rx"}, {"semantic", "good"}},
+            {{"label", "tx"}, {"semantic", "info"}}}},
+          {"points", events->RecentPoints("hd.io_bps")},
+          {"height", 220},
+      };
+      args.data["forwards_plot"] = {
+          {"topic", "hd.fwd_per_sec"},
+          {"title", "forwards/sec"},
+          {"y_label", "fwd/s"},
+          {"window_s", 300},
+          {"series",
+           {{{"label", "mesh"}, {"semantic", "accent"}},
+            {{"label", "fleet"}, {"semantic", "warn"}}}},
+          {"points", events->RecentPoints("hd.fwd_per_sec")},
+          {"height", 180},
+      };
       add_meta(args.meta, "hyper-derp — counters", "counters");
       auto r = ui::Render(*eng, req, args);
       if (!r) {
@@ -359,7 +396,66 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
   }
 
  private:
+  // 1Hz background sampler. Fetches /api/v1/counters, computes
+  // per-second deltas from the last sample, and publishes to
+  // hd.io_bps + hd.fwd_per_sec. Fetches that fail are silent —
+  // a daemon outage just yields a gap on the chart, the next
+  // successful fetch reseeds the previous-sample state.
+  void StartSampler(ui::EventStream *events) {
+    if (!events) return;
+    sampler_ = std::thread([this, events]() {
+      using namespace std::chrono;
+      struct Snapshot {
+        bool valid = false;
+        steady_clock::time_point ts;
+        std::int64_t recv = 0;
+        std::int64_t send = 0;
+        std::int64_t mesh = 0;
+        std::int64_t fleet = 0;
+      };
+      Snapshot prev;
+      while (!sampler_stop_.load(std::memory_order_relaxed)) {
+        std::this_thread::sleep_for(seconds(1));
+        if (sampler_stop_.load(std::memory_order_relaxed)) break;
+        auto resp = client_.Get("/api/v1/counters");
+        if (!resp) continue;
+        Snapshot now;
+        now.valid = true;
+        now.ts = steady_clock::now();
+        now.recv = resp->value("total_recv_bytes",
+                                std::int64_t{0});
+        now.send = resp->value("total_send_bytes",
+                                std::int64_t{0});
+        now.mesh = resp->value("total_hd_mesh_forwards",
+                                std::int64_t{0});
+        now.fleet = resp->value("total_hd_fleet_forwards",
+                                 std::int64_t{0});
+        if (prev.valid) {
+          const double dt =
+              duration<double>(now.ts - prev.ts).count();
+          if (dt > 0) {
+            const double rx_bps = (now.recv - prev.recv) / dt;
+            const double tx_bps = (now.send - prev.send) / dt;
+            const double mesh_ps = (now.mesh - prev.mesh) / dt;
+            const double fleet_ps = (now.fleet - prev.fleet) / dt;
+            const auto epoch = system_clock::now()
+                                   .time_since_epoch();
+            const auto secs =
+                duration_cast<seconds>(epoch).count();
+            events->PublishData("hd.io_bps",
+                                {secs, rx_bps, tx_bps});
+            events->PublishData("hd.fwd_per_sec",
+                                {secs, mesh_ps, fleet_ps});
+          }
+        }
+        prev = now;
+      }
+    });
+  }
+
   HdClient client_;
+  std::thread sampler_;
+  std::atomic<bool> sampler_stop_{false};
 };
 
 }  // namespace

@@ -124,7 +124,22 @@ TEST(HdRelayAdapter, TemplatesResolveAndRenderWithFakeJson) {
   EXPECT_NE(pe_empty->find("no peers enrolled yet"),
             std::string::npos);
 
-  // Counters: totals + per-worker rows.
+  // Counters: totals + per-worker rows + plot configs. The
+  // counters template now embeds two realtime plots driven by
+  // the adapter's background sampler, so the test data has to
+  // include their plot configs even though no data flows in
+  // this offline render.
+  auto plot = [](const std::string &topic,
+                 const std::string &title,
+                 const std::string &y_label,
+                 nlohmann::json series) {
+    return nlohmann::json{
+        {"topic", topic},     {"title", title},
+        {"y_label", y_label}, {"window_s", 300},
+        {"series", std::move(series)},
+        {"points", nlohmann::json::array()},
+        {"height", 180}};
+  };
   nlohmann::json counters = {
       {"totals",
        nlohmann::json::array(
@@ -140,7 +155,17 @@ TEST(HdRelayAdapter, TemplatesResolveAndRenderWithFakeJson) {
                 {{"text", "20 KiB"}, {"align", "right"}},
                 {{"text", "0"},
                  {"align", "right"},
-                 {"semantic", "default"}}})})}};
+                 {"semantic", "default"}}})})},
+      {"throughput_plot",
+       plot("hd.io_bps", "throughput", "B/s",
+            nlohmann::json::array(
+                {{{"label", "rx"}, {"semantic", "good"}},
+                 {{"label", "tx"}, {"semantic", "info"}}}))},
+      {"forwards_plot",
+       plot("hd.fwd_per_sec", "forwards/sec", "fwd/s",
+            nlohmann::json::array(
+                {{{"label", "mesh"}, {"semantic", "accent"}},
+                 {{"label", "fleet"}, {"semantic", "warn"}}}))}};
   auto co = eng.Render("hd/counters", counters);
   ASSERT_TRUE(co.has_value()) << co.error().message;
   EXPECT_NE(co->find("total RX"), std::string::npos);

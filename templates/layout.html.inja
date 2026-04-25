@@ -14,14 +14,15 @@
   </style>
   <title>{{ meta.title | default("einheit") }}</title>
   <link rel="stylesheet" href="/assets/base.css">
+  <link rel="stylesheet" href="/assets/uplot.min.css">
   <link rel="stylesheet" href="/theme.css">
-  {# htmx + ws-ext stay in <head> with defer — htmx itself
-     mustn't re-init on every boosted swap. sidebar.js moves to
-     the body bottom so it re-runs after each swap (the head's
-     scripts aren't re-evaluated by hx-boost; only swapped body
-     scripts are). #}
+  {# htmx + ws-ext + uPlot stay in <head> with defer — they
+     bootstrap once per browser session, not per navigation.
+     Per-page bootstrap (sidebar.js, plot.js) sits at body
+     bottom so hx-boost re-runs them after each swap. #}
   <script src="/assets/htmx.min.js" defer></script>
   <script src="/assets/htmx-ext-ws.js" defer></script>
+  <script src="/assets/uplot.min.js" defer></script>
 </head>
 <body class="app-shell" hx-ext="ws" ws-connect="/events"
       hx-boost="true">
@@ -30,5 +31,6 @@
     <!--EINHEIT_BODY-->
   </main>
   <script src="/assets/sidebar.js"></script>
+  <script src="/assets/plot.js"></script>
 </body>
 </html>

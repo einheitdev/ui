@@ -117,6 +117,45 @@ class EventStream {
   /// Number of currently connected subscribers. Useful in metrics.
   auto SubscriberCount() const -> std::size_t;
 
+  // ----------------------------------------------------------
+  // Metric stream. Same EventStream object hosts a second
+  // WebSocket endpoint at /metrics/ws that carries typed JSON
+  // data points instead of HTML fragments. Plot widgets
+  // subscribe there; HTMX-OOB clients keep using /events.
+  // ----------------------------------------------------------
+
+  /// Push one data point on `topic`. Server-side, the point is
+  /// also appended to a per-topic ring buffer (capped at
+  /// kRingCapacity) so newly connecting browsers can be
+  /// prepopulated by the rendering route.
+  ///
+  /// Wire envelope: `{"type":"data","topic":<topic>,"point":<json>}`
+  /// where `point` is whatever shape the publisher chose. The
+  /// shipped plot.js expects `[ts_seconds, y0, y1, ...]`.
+  /// @param topic Logical topic name.
+  /// @param point JSON value for the data point.
+  auto PublishData(std::string_view topic,
+                   const nlohmann::json &point) -> void;
+
+  /// Mount the metrics WebSocket endpoint at the canonical
+  /// `/metrics/ws` path. Plot.js connects here.
+  /// @param app Crow app.
+  auto MountMetrics(crow::SimpleApp &app) -> void;
+
+  /// Snapshot of the ring buffer for `topic`, oldest first.
+  /// Empty array when the topic has never been published.
+  /// Adapters render this into a plot partial's data attribute
+  /// so the chart hydrates with history before the first WS
+  /// push lands.
+  /// @param topic Logical topic name.
+  /// @returns JSON array of points.
+  auto RecentPoints(std::string_view topic) const -> nlohmann::json;
+
+  /// Maximum points retained per topic. ~10 minutes at 1Hz; long
+  /// enough for a reasonable default plot window, short enough
+  /// that the per-topic memory cost is irrelevant.
+  static constexpr std::size_t kRingCapacity = 600;
+
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
