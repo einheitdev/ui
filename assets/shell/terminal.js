@@ -58,7 +58,10 @@
   };
 
   const term = new window.Terminal({
-    cursorBlink: true,
+    // xterm's built-in blink is a hard on/off. We disable it and
+    // run a CSS keyframe fade in base.css instead (calmer pulse,
+    // tied to the framework's other animations).
+    cursorBlink: false,
     fontFamily:
         '"Fira Code", ui-monospace, "Cascadia Mono", '
         + '"Source Code Pro", Menlo, monospace',
