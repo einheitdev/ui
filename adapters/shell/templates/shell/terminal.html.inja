@@ -1,36 +1,53 @@
-{# Web terminal page. Vendoring xterm.js + the fit and attach
-   addons + the theme glue is task 5; today the page sets up the
-   container, loads the assets if they exist, and bridges keystrokes
-   over /shell/ws. The same surface — minus the addons — works as a
-   bare textarea fallback if xterm.js is missing. #}
-<section class="card">
-  <h2 class="card-title">shell</h2>
-  <div class="card-body">
-    <p style="margin:0 0 12px 0; color: var(--einheit-dim);">
-      einheit-cli over a sandboxed PTY. Locked mode: no host shell,
-      no pager spawn, no file paths.
+{# Web terminal page. xterm.js + fit-addon are vendored under
+   /assets/xterm/; the bridge script in /assets/shell/terminal.js
+   wires keystrokes/output to the /shell/ws WebSocket and
+   propagates resize events. The xterm theme is mapped from the
+   framework's --einheit-* CSS variables so the terminal palette
+   tracks whatever theme.css is active. #}
+<section class="card shell-card">
+  <div class="card-body shell-body">
+    <p class="shell-prelude">
+      einheit-cli over a sandboxed PTY. <span class="shell-locked">[locked]</span>
+      no host shell, no pager spawn, no file paths.
     </p>
     <div id="terminal" class="shell-terminal"
          data-ws-path="{{ ws_path }}"
          data-adapter="{{ adapter }}"></div>
     <noscript>
-      <div class="card card-warn"
-           style="margin-top:12px">
+      <div class="card card-warn" style="margin-top:12px">
         This page needs JavaScript to render the terminal.
       </div>
     </noscript>
   </div>
 </section>
 
-{# Fall back to a "task 5 will vendor xterm.js" notice if the
-   xterm.js asset is not present yet. The bootstrap script tests
-   `window.Terminal` after the lazy load and shows a textarea
-   pretending to be a terminal so we still have a smoke-test
-   surface for the WS bridge. #}
-<link rel="stylesheet" href="/assets/xterm/xterm.css"
-      onerror="this.remove()">
-<script src="/assets/xterm/xterm.js"
-        onerror="window.__einheitNoXterm = true"></script>
-<script src="/assets/xterm/xterm-addon-fit.js"
-        onerror="window.__einheitNoFit = true"></script>
+<style>
+  .shell-card { padding: 0; }
+  .shell-body { padding: 0; }
+  .shell-prelude {
+    margin: 0;
+    padding: 12px 16px;
+    color: var(--einheit-fg2);
+    border-bottom: 1px solid var(--einheit-border);
+    font-size: 0.9rem;
+  }
+  .shell-locked {
+    color: var(--einheit-bad);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .shell-terminal {
+    background: var(--einheit-bg);
+    padding: 12px;
+    /* xterm.js's CanvasAddon writes the cursor + selection
+       into a canvas; the host needs a fixed-ish height so the
+       fit-addon has room to compute proposeDimensions(). */
+    height: calc(100vh - 200px);
+    min-height: 360px;
+  }
+</style>
+
+<link rel="stylesheet" href="/assets/xterm/xterm.css">
+<script src="/assets/xterm/xterm.js"></script>
+<script src="/assets/xterm/xterm-addon-fit.js"></script>
 <script src="/assets/shell/terminal.js"></script>

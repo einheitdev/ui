@@ -1,24 +1,91 @@
-// terminal.js — bridges xterm.js (or a textarea fallback) to the
-// /shell/ws WebSocket endpoint. Loaded by adapters/shell/templates/
-// shell/terminal.html.inja.
+// terminal.js — bridges xterm.js to the /shell/ws WebSocket.
 //
-// Task 5 will vendor the xterm.js + fit-addon assets into
-// /assets/xterm/ and tighten the theme glue (truecolor palette
-// pulled from the framework's --einheit-* CSS vars). Today the
-// script handles two states:
+// Resize protocol: the browser computes new (cols, rows) on every
+// window resize via the fit-addon and sends a JSON envelope
+// {"type":"resize","cols":N,"rows":M}. The adapter's WS handler
+// recognizes leading-`{` text frames as control envelopes and
+// forwards everything else as raw input to the PTY master.
 //
-//   1. xterm.js loaded — render a real terminal.
-//   2. xterm.js missing — fall back to a textarea so the WS bridge
-//      is still smoke-testable end-to-end.
+// xterm theme palette is mapped from the framework's --einheit-*
+// CSS variables on document.documentElement, so a theme.css
+// change (or `theme use <name>` in the cli) re-themes the
+// terminal on the next page load.
 (function () {
   'use strict';
 
   const host = document.getElementById('terminal');
-  if (!host) return;
+  if (!host || !window.Terminal) return;
+
   const wsPath = host.dataset.wsPath || '/shell/ws';
   const wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') +
                 location.host + wsPath;
+
+  function cssVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement)
+                  .getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  // Map the framework's semantic palette onto xterm's 16-colour
+  // ANSI slots. We don't have a 1:1 between (good/warn/bad/info)
+  // and the ANSI palette, so we use the semantic colours for the
+  // colours operators see most (red/green/yellow/blue) and copy
+  // the bright variants from the same set. Black/white come from
+  // the surface/foreground vars so they stay legible against the
+  // chosen background.
+  const palette = {
+    background: cssVar('--einheit-bg', '#101010'),
+    foreground: cssVar('--einheit-fg', '#e0e0e0'),
+    cursor: cssVar('--einheit-accent', '#bb86fc'),
+    cursorAccent: cssVar('--einheit-bg', '#101010'),
+    selectionBackground: cssVar('--einheit-bg2', '#283238'),
+    black: cssVar('--einheit-bg2', '#283238'),
+    red: cssVar('--einheit-bad', '#cf6679'),
+    green: cssVar('--einheit-good', '#03dac5'),
+    yellow: cssVar('--einheit-warn', '#ffb74d'),
+    blue: cssVar('--einheit-info', '#82aaff'),
+    magenta: cssVar('--einheit-accent', '#bb86fc'),
+    cyan: cssVar('--einheit-info', '#82aaff'),
+    white: cssVar('--einheit-fg', '#e0e0e0'),
+    brightBlack: cssVar('--einheit-fg3', '#7a8b94'),
+    brightRed: cssVar('--einheit-bad', '#cf6679'),
+    brightGreen: cssVar('--einheit-good', '#03dac5'),
+    brightYellow: cssVar('--einheit-warn', '#ffb74d'),
+    brightBlue: cssVar('--einheit-info', '#82aaff'),
+    brightMagenta: cssVar('--einheit-accent', '#bb86fc'),
+    brightCyan: cssVar('--einheit-info', '#82aaff'),
+    brightWhite: cssVar('--einheit-fg', '#e0e0e0'),
+  };
+
+  const term = new window.Terminal({
+    cursorBlink: true,
+    fontFamily:
+        'ui-monospace, "Cascadia Mono", "Source Code Pro", monospace',
+    fontSize: 13,
+    scrollback: 5000,
+    allowProposedApi: true,
+    theme: palette,
+  });
+  term.open(host);
+
+  let fit = null;
+  if (window.FitAddon && window.FitAddon.FitAddon) {
+    fit = new window.FitAddon.FitAddon();
+    term.loadAddon(fit);
+  }
+
+  // Run an initial fit once the container has settled. We delay
+  // a tick to give the browser layout pass a chance to resolve
+  // the host's height (the calc(100vh - …) uses viewport-derived
+  // units so first-frame can race the resize observer).
+  function tryFit() {
+    if (!fit) return;
+    try { fit.fit(); } catch (e) { /* host not yet sized */ }
+  }
+  requestAnimationFrame(tryFit);
+
   const ws = new WebSocket(wsUrl);
+  ws.binaryType = 'arraybuffer';
 
   function send(payload) {
     if (ws.readyState === WebSocket.OPEN) {
@@ -26,89 +93,50 @@
     }
   }
 
-  if (window.Terminal && !window.__einheitNoXterm) {
-    // xterm.js path. Fit addon is optional — without it the
-    // terminal renders at the host's nominal size and resize
-    // events do not propagate.
-    const term = new window.Terminal({
-      cursorBlink: true,
-      fontFamily: 'ui-monospace, "Cascadia Mono", "Source Code Pro", monospace',
-      fontSize: 13,
-      theme: {
-        background: getCss('--einheit-bg', '#101010'),
-        foreground: getCss('--einheit-fg', '#e0e0e0'),
-      },
-    });
-    term.open(host);
-    let fit = null;
-    if (window.FitAddon && !window.__einheitNoFit) {
-      fit = new window.FitAddon.FitAddon();
-      term.loadAddon(fit);
-      try { fit.fit(); } catch (e) { /* host not yet sized */ }
-    }
-    term.onData(send);
-
-    function notifyResize() {
-      const cols = term.cols;
-      const rows = term.rows;
-      send(JSON.stringify({type: 'resize', cols: cols, rows: rows}));
-    }
-
-    ws.addEventListener('open', notifyResize);
-    ws.addEventListener('message', function (ev) {
-      term.write(ev.data);
-    });
-    ws.addEventListener('close', function () {
-      term.write('\r\n\x1b[31m[connection closed]\x1b[0m\r\n');
-    });
-
-    if (fit) {
-      window.addEventListener('resize', function () {
-        try { fit.fit(); } catch (e) { /* tear-down */ }
-        notifyResize();
-      });
-    }
-  } else {
-    // Fallback: textarea + paragraph for output. Not pretty but
-    // round-trips bytes, which is the point until xterm.js is
-    // vendored.
-    host.innerHTML = '';
-    const out = document.createElement('pre');
-    out.style.cssText =
-        'background: var(--einheit-surface, #181818); ' +
-        'color: var(--einheit-fg, #e0e0e0); ' +
-        'padding: 12px; min-height: 360px; overflow:auto; ' +
-        'font-family: monospace; white-space: pre-wrap;';
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'type a command, Enter to send';
-    input.style.cssText =
-        'width: 100%; margin-top: 8px; padding: 8px; ' +
-        'font-family: monospace; ' +
-        'background: var(--einheit-bg, #101010); ' +
-        'color: var(--einheit-fg, #e0e0e0); ' +
-        'border: 1px solid var(--einheit-border, #333);';
-    host.appendChild(out);
-    host.appendChild(input);
-
-    ws.addEventListener('message', function (ev) {
-      out.textContent += ev.data;
-      out.scrollTop = out.scrollHeight;
-    });
-    ws.addEventListener('close', function () {
-      out.textContent += '\n[connection closed]\n';
-    });
-    input.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter') {
-        send(input.value + '\r');
-        input.value = '';
-      }
-    });
+  function notifyResize() {
+    send(JSON.stringify({
+      type: 'resize',
+      cols: term.cols,
+      rows: term.rows,
+    }));
   }
 
-  function getCss(name, fallback) {
-    const v = getComputedStyle(document.documentElement)
-                  .getPropertyValue(name).trim();
-    return v || fallback;
+  ws.addEventListener('open', function () {
+    tryFit();
+    notifyResize();
+    term.focus();
+  });
+
+  ws.addEventListener('message', function (ev) {
+    if (typeof ev.data === 'string') {
+      term.write(ev.data);
+    } else {
+      // Binary frame — decode as UTF-8.
+      term.write(new TextDecoder().decode(ev.data));
+    }
+  });
+
+  ws.addEventListener('close', function () {
+    term.write(
+        '\r\n\x1b[31m[connection closed — reload to start a new session]'
+        + '\x1b[0m\r\n');
+  });
+
+  term.onData(send);
+
+  // ResizeObserver tracks the host element rather than the
+  // window so we react to layout changes (sidebar toggles,
+  // browser zoom) as well as raw window resizes.
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(function () {
+      tryFit();
+      notifyResize();
+    });
+    ro.observe(host);
+  } else {
+    window.addEventListener('resize', function () {
+      tryFit();
+      notifyResize();
+    });
   }
 })();
