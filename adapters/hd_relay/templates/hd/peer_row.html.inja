@@ -1,0 +1,32 @@
+{# Single peer row. Used both inline by hd/peers and as the
+   fragment swapped back after approve/deny. The action button(s)
+   shown depend on the peer's current state. #}
+<tr id="peer-{{ p.key }}">
+  <td><code>{{ p.key_str }}</code></td>
+  <td>
+    <span class="badge badge-{{ p.state_semantic }}">
+      {{ p.state }}
+    </span>
+  </td>
+  <td class="right">{{ p.rule_count }}</td>
+  <td class="right">{{ p.fd }}</td>
+  <td class="right">
+{% if p.state == "pending" %}
+    <button class="btn btn-primary"
+            hx-post="/peers/{{ p.key }}/approve"
+            hx-swap="outerHTML"
+            hx-target="#peer-{{ p.key }}">approve</button>
+    <button class="btn btn-danger"
+            hx-post="/peers/{{ p.key }}/deny"
+            hx-swap="outerHTML"
+            hx-target="#peer-{{ p.key }}"
+            hx-confirm="deny peer {{ p.key_str }}?">deny</button>
+{% else if p.state == "approved" %}
+    <button class="btn btn-danger"
+            hx-post="/peers/{{ p.key }}/deny"
+            hx-swap="outerHTML"
+            hx-target="#peer-{{ p.key }}"
+            hx-confirm="revoke peer {{ p.key_str }}?">revoke</button>
+{% endif %}
+  </td>
+</tr>

@@ -1,0 +1,42 @@
+<section class="card">
+  <h2 class="card-title">totals</h2>
+  <div class="card-body">
+    <dl class="status-grid">
+{% for row in totals %}
+      <dt class="status-label">{{ row.label }}</dt>
+      <dd class="status-value
+{%- if existsIn(row, "semantic") %} cell-{{ row.semantic }}{% endif -%}
+">{{ row.value }}</dd>
+{% endfor %}
+    </dl>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">per-worker</h2>
+  <div class="card-body">
+{% if length(workers) > 0 %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>id</th>
+          <th class="right">recv</th>
+          <th class="right">send</th>
+          <th class="right">drops</th>
+        </tr>
+      </thead>
+      <tbody>
+{% for row in workers %}
+        <tr>
+{% for cell in row %}
+          <td class="{% if existsIn(cell, "semantic") %}cell-{{ cell.semantic }} {% endif %}{{ cell.align | default("left") }}">{{ cell.text }}</td>
+{% endfor %}
+        </tr>
+{% endfor %}
+      </tbody>
+    </table>
+{% else %}
+    <div class="empty">no worker stats reported</div>
+{% endif %}
+  </div>
+</section>

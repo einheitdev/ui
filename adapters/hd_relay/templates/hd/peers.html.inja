@@ -1,0 +1,25 @@
+<section class="card">
+  <h2 class="card-title">peers</h2>
+  <div class="card-body">
+{% if length(peers) > 0 %}
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>key</th>
+          <th>state</th>
+          <th class="right">rules</th>
+          <th class="right">fd</th>
+          <th class="right">action</th>
+        </tr>
+      </thead>
+      <tbody>
+{% for p in peers %}
+        {% include "hd/peer_row" %}
+{% endfor %}
+      </tbody>
+    </table>
+{% else %}
+    <div class="empty">no peers enrolled yet</div>
+{% endif %}
+  </div>
+</section>

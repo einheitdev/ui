@@ -13,9 +13,17 @@ WebSocket for live updates. JavaScript on the wire stays under
 
 Each product daemon owns its data and exposes it through Crow
 routes; the framework supplies the template engine, theme, route
-helpers, SSE bridge, static asset mount, and shared partials. Per
-product an adapter under `adapters/<name>/` registers routes,
-binds SSE topics, and contributes nav entries.
+helpers, WebSocket bridge, static asset mount, and shared
+partials. Per product an adapter under `adapters/<name>/`
+registers routes, binds WS topics, and contributes nav entries.
+
+Two adapter shapes are in use today: in-process (the `example`
+adapter holds its own state) and HTTP-proxy (the `hd_relay`
+adapter calls the daemon's existing `/api/v1/...` endpoints over
+cpp-httplib and renders the JSON it gets back). Pick the
+former when the UI binary IS the daemon binary; pick the latter
+when the daemon already exposes a stable REST API and the UI
+runs as a sidecar.
 
 ## Build
 
@@ -39,7 +47,7 @@ sudo apt install -y \
 ```
 
 FetchContent pulls: Crow, inja, nlohmann_json, spdlog, CLI11,
-GoogleTest.
+cpp-httplib (for adapter HTTP clients), GoogleTest.
 
 ## Layout
 
@@ -58,9 +66,11 @@ GoogleTest.
   `partials/table`, `partials/badge`, `partials/error`,
   `partials/status`, `partials/log_entry`, `partials/button`,
   `partials/empty`, `theme.css`)
-- `assets/` — vendored client-side assets (htmx, sse extension,
+- `assets/` — vendored client-side assets (htmx, ws extension,
   uplot, base.css). See `assets/README.note` for fetch commands.
 - `adapters/example/` — minimal adapter to copy/paste from
+- `adapters/hd_relay/` — Hyper-DERP UI; HTTP-proxies the daemon's
+  existing `/api/v1/...` endpoints via `cpp-httplib`
 - `binaries/einheit-ui/src/main.cc` — server entry point
 - `cmake/` — sub-library definitions + third-party fetches
 

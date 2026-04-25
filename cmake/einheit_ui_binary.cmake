@@ -9,6 +9,7 @@ target_link_libraries(einheit-ui
   PRIVATE
     einheit_ui
     einheit_ui_adapter_example
+    einheit_ui_adapter_hd_relay
     CLI11::CLI11
 )
 

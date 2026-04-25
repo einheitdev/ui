@@ -55,6 +55,16 @@ set(CROW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CROW_ENABLE_SSL ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(crow)
 
+# ----- cpp-httplib (header-only, OpenSSL-backed HTTP client) ----------------
+FetchContent_Declare(httplib
+  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+  GIT_TAG v0.18.5
+  GIT_SHALLOW TRUE
+)
+set(HTTPLIB_REQUIRE_OPENSSL ON CACHE BOOL "" FORCE)
+set(HTTPLIB_COMPILE OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(httplib)
+
 # ----- spdlog ---------------------------------------------------------------
 set(SPDLOG_BUILD_SHARED ON CACHE BOOL "" FORCE)
 set(SPDLOG_NO_EXCEPTIONS OFF CACHE BOOL "" FORCE)

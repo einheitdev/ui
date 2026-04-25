@@ -35,18 +35,27 @@ ctest --preset default
 ```
 
 CMake `FetchContent` pulls Crow, inja, nlohmann_json, spdlog,
-CLI11, and GoogleTest. Vendor `htmx` + `uplot` once with the curl
-commands in [`assets/README.note`](assets/README.note).
+CLI11, cpp-httplib (for adapter HTTP clients), and GoogleTest.
+Vendor `htmx` + `uplot` once with the curl commands in
+[`assets/README.note`](assets/README.note).
 
 ## Run
 
 ```bash
+# Example adapter
 ./build/einheit-ui --bind 127.0.0.1 --port 7542
+
+# Hyper-DERP UI pointed at a running daemon
+./build/einheit-ui --bind 127.0.0.1 --port 7542 \
+  --adapter hd-relay \
+  --hd-url http://127.0.0.1:9090
 ```
 
 Open <http://127.0.0.1:7542/> for the example dashboard. `POST /tick`
 bumps the counter; a WebSocket push swaps the counter card in every
-connected browser.
+connected browser. The hd-relay adapter surfaces overview / peers
+(with approve / deny / revoke actions) / counters / audit, talking
+HTTP to the Hyper-DERP daemon's `/api/v1/...` endpoints.
 
 ## Layout
 
@@ -60,9 +69,11 @@ connected browser.
 - `src/` — implementations mirror headers
 - `templates/` — shared inja partials (`layout`, `partials/card`,
   `partials/table`, `partials/badge`, `partials/error`,
-  `theme.css`)
+  `partials/status`, `partials/log_entry`, `partials/button`,
+  `partials/empty`, `theme.css`)
 - `assets/` — vendored client-side assets (HTMX, uPlot, base.css)
 - `adapters/example/` — minimal adapter to copy/paste from
+- `adapters/hd_relay/` — Hyper-DERP UI: peers, counters, audit
 - `binaries/einheit-ui/` — server entry point
 - `cmake/` — sub-library + third-party fetches
 

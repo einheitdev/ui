@@ -17,6 +17,7 @@
 #include <spdlog/spdlog.h>
 
 #include "einheit/adapters/example/ui_adapter.h"
+#include "einheit/adapters/hd_relay/ui_adapter.h"
 #include "einheit/ui/adapter.h"
 #include "einheit/ui/render/template_engine.h"
 #include "einheit/ui/route.h"
@@ -56,19 +57,28 @@ auto main(int argc, char **argv) -> int {
   std::string templates_dir;
   std::string assets_dir;
   std::string theme_name = "psychotropic";
+  std::string hd_url = "http://127.0.0.1:9090";
+  std::string hd_token;
 
   app.add_option("--bind", bind_addr, "Bind address");
   app.add_option("--port", port, "TCP port");
   app.add_option("--tls-cert", tls_cert, "TLS certificate path");
   app.add_option("--tls-key", tls_key, "TLS private key path");
   app.add_option("--adapter", adapter_name,
-                 "Product adapter (example)");
+                 "Product adapter (example | hd-relay)");
   app.add_option("--templates", templates_dir,
                  "Override templates root");
   app.add_option("--assets", assets_dir,
                  "Override assets directory");
   app.add_option("--theme", theme_name,
-                 "Theme name (psychotropic, light, ...)");
+                 "Theme name (psychotropic, light, ocean, "
+                 "forest, solarized-dark, high-contrast)");
+  app.add_option("--hd-url", hd_url,
+                 "Hyper-DERP daemon HTTP base URL "
+                 "(hd-relay adapter only)");
+  app.add_option("--hd-token", hd_token,
+                 "Bearer token for the hd metrics endpoint "
+                 "(optional)");
 
   try {
     app.parse(argc, argv);
@@ -79,6 +89,12 @@ auto main(int argc, char **argv) -> int {
   std::unique_ptr<einheit::ui::ProductUiAdapter> adapter;
   if (adapter_name == "example") {
     adapter = einheit::adapters::example::NewExampleUiAdapter();
+  } else if (adapter_name == "hd-relay") {
+    einheit::adapters::hd_relay::HdClientConfig hcfg;
+    hcfg.base_url = hd_url;
+    hcfg.bearer_token = hd_token;
+    adapter = einheit::adapters::hd_relay::NewHdRelayUiAdapter(
+        std::move(hcfg));
   } else {
     std::cerr << std::format("unknown adapter '{}'\n", adapter_name);
     return 1;

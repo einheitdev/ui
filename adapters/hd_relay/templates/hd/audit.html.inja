@@ -1,0 +1,6 @@
+<section class="card">
+  <h2 class="card-title">recent audit</h2>
+  <div class="card-body">
+    {% include "partials/log_entry" %}
+  </div>
+</section>

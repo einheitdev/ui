@@ -40,6 +40,28 @@ gtest_discover_tests(test_partials
   PROPERTIES TIMEOUT 30
 )
 
+# hd-relay adapter contract test links against the hd-relay
+# adapter library; renders its templates against fake JSON shaped
+# like hd's actual responses.
+add_executable(test_hd_relay_adapter test_hd_relay_adapter.cc)
+target_include_directories(test_hd_relay_adapter
+  PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_definitions(test_hd_relay_adapter
+  PRIVATE
+    EINHEIT_UI_FRAMEWORK_TEMPLATES_DIR="${PROJECT_SOURCE_DIR}/templates"
+)
+target_link_libraries(test_hd_relay_adapter
+  PRIVATE
+    einheit_ui
+    einheit_ui_adapter_hd_relay
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(test_hd_relay_adapter
+  DISCOVERY_TIMEOUT 10
+  PROPERTIES TIMEOUT 30
+)
+
 # Adapter contract test links the shipped example adapter to assert
 # the templates render and the route registrations behave.
 add_executable(test_example_adapter test_example_adapter.cc)
