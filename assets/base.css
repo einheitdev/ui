@@ -582,7 +582,11 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
   color: var(--einheit-fg3);
   pointer-events: none;
 }
-.filter-input {
+/* Stack the attribute selector + class so this beats the
+   `input[type="search"]` rule's padding shorthand on
+   specificity. Otherwise the input's left padding stays at
+   10px and the search icon overlaps the typed text. */
+input[type="search"].filter-input {
   width: 100%;
   padding-left: 28px;
 }
