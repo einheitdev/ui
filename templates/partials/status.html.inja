@@ -1,0 +1,13 @@
+{# Status partial. Renders a labelled key/value grid — the
+   pattern every product opens its dashboard with (hostname,
+   version, uptime, mode, etc.). Required:
+     rows: [{label, value, semantic?}]
+   Wrap externally for OOB targeting. #}
+<dl class="status-grid">
+{% for row in rows %}
+  <dt class="status-label">{{ row.label }}</dt>
+  <dd class="status-value
+{%- if existsIn(row, "semantic") %} cell-{{ row.semantic }}{% endif -%}
+">{{ row.value }}</dd>
+{% endfor %}
+</dl>

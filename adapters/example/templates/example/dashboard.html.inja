@@ -1,10 +1,28 @@
+{# Example dashboard. Composes partials so contributors can see the
+   intended building-block pattern: status grid, counter card,
+   action button, log viewer. The data flows from the adapter's
+   `/` route handler. #}
+<section class="card card-good">
+  <h2 class="card-title">status</h2>
+  <div class="card-body">
+    {% include "partials/status" %}
+  </div>
+</section>
+
 <section class="card">
-  <h2 class="card-title">example dashboard</h2>
+  <h2 class="card-title">counter demo</h2>
   <div class="card-body">
     {% include "example/counter_card" %}
-    <form hx-post="/tick" hx-swap="outerHTML" hx-target="#counter-card"
-          style="margin-top:16px">
-      <button type="submit" class="btn-primary">tick</button>
+    <form hx-post="/tick" hx-swap="outerHTML"
+          hx-target="#counter-card" style="margin-top:16px">
+      {% include "partials/button" %}
     </form>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">recent events</h2>
+  <div class="card-body">
+    {% include "partials/log_entry" %}
   </div>
 </section>

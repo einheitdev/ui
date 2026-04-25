@@ -1,0 +1,13 @@
+{# Button partial. Used everywhere a daemon action gets triggered
+   (approve/deny, attach/detach, commit/rollback). HTMX
+   attributes flow through `attrs`. Required:
+     label  — visible text
+     attrs  — map of additional HTML attributes (hx-post,
+              hx-confirm, hx-target, type, ...). Pass an empty
+              object {} to omit; the field must always be
+              present so the for-loop has something to iterate.
+   Optional:
+     semantic — primary | danger | ghost (defaults to primary) #}
+<button class="btn btn-{{ semantic | default("primary") }}"
+{%- for k, v in attrs %} {{ k }}="{{ v }}"{% endfor -%}
+>{{ label }}</button>

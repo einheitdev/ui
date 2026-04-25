@@ -58,7 +58,25 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
       ui::RenderArgs args;
       args.fragment = "example/dashboard";
       args.layout = "layout";
-      args.data = {{"counter", counter_.load()}};
+      args.data = {
+          {"counter", counter_.load()},
+          // partials/status rows.
+          {"rows",
+           {{{"label", "adapter"}, {"value", "example"},
+             {"semantic", "info"}},
+            {{"label", "build"}, {"value", "debug"}},
+            {{"label", "uptime"}, {"value", "just now"},
+             {"semantic", "good"}}}},
+          // partials/button context.
+          {"label", "tick"},
+          // partials/log_entry context.
+          {"entries",
+           {{{"timestamp", "10:30:00"}, {"level", "INFO"},
+             {"message", "engine started"}},
+            {{"timestamp", "10:30:01"}, {"level", "DEBUG"},
+             {"message", "websocket /events mounted"}}}},
+      };
+      args.data["attrs"] = nlohmann::json::object();
       args.meta = {
           {"title", "example — dashboard"},
           {"brand", DisplayName()},

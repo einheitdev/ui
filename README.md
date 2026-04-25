@@ -150,17 +150,37 @@ ctx.events->Publish("f.rules.changed",
 The framework renders the fragment, wraps it for HTMX out-of-band
 swap, and broadcasts to every connected browser.
 
+## Themes
+
+Six built-in palettes, selected with `--theme`:
+
+| Name             | Notes                                  |
+|------------------|----------------------------------------|
+| `psychotropic`   | default dark; matches the cli theme    |
+| `light`          | mirror palette for light terminals     |
+| `ocean`          | cool blue-teal                         |
+| `forest`         | earthy green                           |
+| `solarized-dark` | Schoonover's Solarized                 |
+| `high-contrast`  | near-monochrome, max legibility        |
+
+Each emits a CSS custom-property block at `/theme.css` keyed by
+`--einheit-bg` / `--einheit-fg` / `--einheit-good` / etc. that
+the layout includes. Adapters can ship their own
+`templates/theme.css.inja` to override.
+
 ## Status
 
-Skeleton stage.
+Skeleton stage, walking-skeleton complete.
 
 Working: template engine with multi-root search and hot reload,
-route format detection, themed CSS, static asset mount with
-path-traversal guards, WebSocket-backed `EventStream` with
-topic→fragment bindings and OOB-swap broadcast, example adapter
-exercising every response shape plus a live tick, 53 unit tests.
+route format detection, themed CSS with six named palettes,
+static asset mount with path-traversal guards, WebSocket-backed
+`EventStream` with topic→fragment bindings and OOB-swap
+broadcast, the partials product UIs need (card, table, badge,
+status, log_entry, button, empty, error), example adapter
+exercising every response shape plus a live tick, 71 unit tests.
 
-TODO: vendor `htmx.min.js`, `htmx-ext-ws.js`, `uplot` from the
-pinned URLs in `assets/README.note`. Port the rest of the
-cli-side themes (ocean, forest, solarized, high-contrast). End-
-to-end integration tests against a running Crow server.
+TODO: per-product time-series chart partial (uPlot) — the
+WebSocket-vs-poll choice for chart data deserves its own pass.
+End-to-end integration tests against a running Crow server.
+First real product adapter (`f` rules table, `hd` peers panel).

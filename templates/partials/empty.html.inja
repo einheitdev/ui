@@ -1,0 +1,4 @@
+{# Empty-state placeholder. Substitute for empty tables, lists,
+   logs. Optional:
+     message — defaults to "nothing here yet" #}
+<div class="empty">{{ message | default("nothing here yet") }}</div>

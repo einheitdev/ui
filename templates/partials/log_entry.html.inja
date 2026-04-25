@@ -1,0 +1,17 @@
+{# Log viewer partial. Renders a scrollable list of structured log
+   entries with semantic level coloring. Required:
+     entries: [{timestamp, level, message}, ...]
+   Empty array renders the empty-state placeholder. #}
+<div class="log-list">
+{% if length(entries) > 0 %}
+{% for e in entries %}
+  <div class="log-entry log-{{ e.level | lower }}">
+    <span class="log-ts">{{ e.timestamp }}</span>
+    <span class="log-lvl">{{ e.level }}</span>
+    <span class="log-msg">{{ e.message }}</span>
+  </div>
+{% endfor %}
+{% else %}
+  <div class="empty">no log entries yet</div>
+{% endif %}
+</div>

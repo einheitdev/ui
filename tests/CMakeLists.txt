@@ -21,6 +21,25 @@ einheit_ui_add_test(test_template_engine)
 einheit_ui_add_test(test_route)
 einheit_ui_add_test(test_stream)
 
+# test_partials renders framework templates from disk; needs the
+# templates dir baked in.
+add_executable(test_partials test_partials.cc)
+target_include_directories(test_partials PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_definitions(test_partials
+  PRIVATE
+    EINHEIT_UI_FRAMEWORK_TEMPLATES_DIR="${PROJECT_SOURCE_DIR}/templates"
+)
+target_link_libraries(test_partials
+  PRIVATE
+    einheit_ui
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(test_partials
+  DISCOVERY_TIMEOUT 10
+  PROPERTIES TIMEOUT 30
+)
+
 # Adapter contract test links the shipped example adapter to assert
 # the templates render and the route registrations behave.
 add_executable(test_example_adapter test_example_adapter.cc)

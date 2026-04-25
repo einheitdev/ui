@@ -56,7 +56,8 @@ GoogleTest.
 - `src/` — implementations mirror headers
 - `templates/` — shared inja partials (`layout`, `partials/card`,
   `partials/table`, `partials/badge`, `partials/error`,
-  `theme.css`)
+  `partials/status`, `partials/log_entry`, `partials/button`,
+  `partials/empty`, `theme.css`)
 - `assets/` — vendored client-side assets (htmx, sse extension,
   uplot, base.css). See `assets/README.note` for fetch commands.
 - `adapters/example/` — minimal adapter to copy/paste from
@@ -85,14 +86,28 @@ GoogleTest.
 
 ## Templating
 
-- inja with auto-escape on. `{{ var }}` interpolation is HTML-safe;
-  use `{{ var | safe }}` only when the value is itself rendered
-  HTML (e.g. the `body` field passed into `layout`).
+- inja with auto-escape on. `{{ var }}` interpolation is HTML-safe.
+  inja has no `safe` filter, so the framework injects rendered
+  HTML bodies via the `<!--EINHEIT_BODY-->` placeholder
+  substitution in the layout, not via interpolation.
 - Adapters resolve template names against their own dir first,
   then the framework dir. To override a framework partial, drop a
   same-named file in `adapters/<x>/templates/partials/`.
 - Hot reload is on automatically in the debug preset; off in
   release.
+
+### Partial gotchas
+
+- inja raises on missing-variable access in `{% if x %}` (no
+  Jinja-style `is defined`). For optional fields on a loop var,
+  use `{% if existsIn(loopvar, "key") %}`. For top-level optional
+  vars, the framework's `Render()` backfills the layout's
+  `meta.{title,brand,active,nav}` with defaults.
+- inja string literals in pipe filters need **double quotes**:
+  `default("info")`, not `default('info')`.
+- inja `{% for k, v in obj %}` requires `obj` to be an object,
+  not null. From C++, write `nlohmann::json::object()` to get an
+  empty object — the brace-init `{{"k", {}}}` collapses to null.
 
 ## Live updates
 

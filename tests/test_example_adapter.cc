@@ -8,6 +8,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include <nlohmann/json.hpp>
 
 #include "einheit/adapters/example/ui_adapter.h"
 #include "einheit/ui/adapter.h"
@@ -53,7 +54,16 @@ TEST(ExampleAdapter, TemplatesResolveAgainstAdapterDir) {
   ASSERT_TRUE(card.has_value()) << card.error().message;
   EXPECT_NE(card->find("counter-card"), std::string::npos);
 
-  auto dash = eng.Render("example/dashboard", {{"counter", 0}});
+  // The dashboard composes status / button / log_entry partials,
+  // so the render context has to carry their inputs.
+  nlohmann::json dash_ctx = {
+      {"counter", 0},
+      {"rows", nlohmann::json::array()},
+      {"label", "tick"},
+      {"entries", nlohmann::json::array()},
+  };
+  dash_ctx["attrs"] = nlohmann::json::object();
+  auto dash = eng.Render("example/dashboard", dash_ctx);
   ASSERT_TRUE(dash.has_value()) << dash.error().message;
   EXPECT_NE(dash->find("tick"), std::string::npos);
 }

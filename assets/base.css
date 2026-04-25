@@ -96,3 +96,91 @@ body {
 .badge-warn { background: color-mix(in srgb, var(--einheit-warn) 15%, transparent); color: var(--einheit-warn); }
 .badge-bad  { background: color-mix(in srgb, var(--einheit-bad)  15%, transparent); color: var(--einheit-bad); }
 .badge-info { background: color-mix(in srgb, var(--einheit-info) 15%, transparent); color: var(--einheit-info); }
+
+.status-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 24px;
+  row-gap: 6px;
+  margin: 0;
+}
+.status-grid .status-label {
+  color: var(--einheit-fg3);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+.status-grid .status-value {
+  color: var(--einheit-fg);
+  font-weight: 500;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-list {
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.log-entry {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  gap: 10px;
+  padding: 2px 0;
+}
+.log-ts  { color: var(--einheit-fg3); }
+.log-lvl { font-weight: 600; min-width: 5ch; }
+.log-msg { color: var(--einheit-fg2); }
+.log-info  .log-lvl { color: var(--einheit-info); }
+.log-warn  .log-lvl,  .log-warning .log-lvl { color: var(--einheit-warn); }
+.log-error .log-lvl { color: var(--einheit-bad); }
+.log-debug .log-lvl { color: var(--einheit-fg3); }
+.log-trace .log-lvl { color: var(--einheit-fg3); }
+
+.btn {
+  border: 1px solid transparent;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 80ms ease;
+}
+.btn-primary {
+  background: var(--einheit-accent);
+  color: var(--einheit-bg);
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+.btn-danger {
+  background: color-mix(in srgb, var(--einheit-bad) 18%, transparent);
+  color: var(--einheit-bad);
+  border-color: color-mix(in srgb, var(--einheit-bad) 35%, transparent);
+}
+.btn-danger:hover {
+  background: color-mix(in srgb, var(--einheit-bad) 28%, transparent);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--einheit-fg2);
+  border-color: var(--einheit-border);
+}
+.btn-ghost:hover {
+  color: var(--einheit-fg);
+  background: var(--einheit-bg2);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--einheit-accent);
+  outline-offset: 2px;
+}
+
+.empty {
+  color: var(--einheit-fg3);
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+}

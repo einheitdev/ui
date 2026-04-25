@@ -1,4 +1,4 @@
 {# Badge partial. Required: text, semantic. #}
-<span class="badge badge-{{ semantic | default('info') }}">
+<span class="badge badge-{{ semantic | default("info") }}">
   {{ text }}
 </span>

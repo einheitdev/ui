@@ -3,6 +3,8 @@
 /// serialisation used to drive the CSS template.
 // Copyright (c) 2026 Einheit Networks
 
+#include <algorithm>
+#include <iterator>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -64,6 +66,56 @@ TEST(Theme, NameRoundTripsThroughJson) {
   t.name = "ocean";
   const auto j = ToJson(t);
   EXPECT_EQ(j.at("name").get<std::string>(), "ocean");
+}
+
+TEST(Theme, AllNamedThemesAreDistinct) {
+  // Different themes shouldn't collide on the page background or
+  // accent — that's a quick proxy for "actually different palette".
+  const Theme dark = DefaultDark();
+  const Theme light = DefaultLight();
+  const Theme ocean = OceanTheme();
+  const Theme forest = ForestTheme();
+  const Theme solarized = SolarizedDarkTheme();
+  const Theme hc = HighContrastTheme();
+
+  // Pairwise: every (a,b) differs in at least the bg or the accent.
+  const Theme themes[] = {dark,      light,     ocean,
+                          forest,    solarized, hc};
+  for (std::size_t i = 0; i < std::size(themes); ++i) {
+    for (std::size_t j = i + 1; j < std::size(themes); ++j) {
+      const bool same =
+          (ToHex(themes[i].bg) == ToHex(themes[j].bg)) &&
+          (ToHex(themes[i].accent) == ToHex(themes[j].accent));
+      EXPECT_FALSE(same)
+          << themes[i].name << " collides with " << themes[j].name;
+    }
+  }
+}
+
+TEST(Theme, NamedThemeListContainsExpectedNames) {
+  const auto list = NamedThemeList();
+  for (const auto *expected :
+       {"forest", "high-contrast", "light", "ocean",
+        "psychotropic", "solarized-dark"}) {
+    EXPECT_NE(std::find(list.begin(), list.end(), expected),
+              list.end())
+        << "missing: " << expected;
+  }
+}
+
+TEST(Theme, NamedThemeAcceptsAliases) {
+  // Both spellings are documented.
+  EXPECT_EQ(ToHex(NamedTheme("solarized").bg),
+            ToHex(NamedTheme("solarized-dark").bg));
+  EXPECT_EQ(ToHex(NamedTheme("contrast").bg),
+            ToHex(NamedTheme("high-contrast").bg));
+}
+
+TEST(Theme, NamedThemeRoutesToCorrectPalette) {
+  EXPECT_EQ(ToHex(NamedTheme("ocean").bg), ToHex(OceanTheme().bg));
+  EXPECT_EQ(ToHex(NamedTheme("forest").bg), ToHex(ForestTheme().bg));
+  EXPECT_EQ(ToHex(NamedTheme("light").bg),
+            ToHex(DefaultLight().bg));
 }
 
 }  // namespace einheit::ui

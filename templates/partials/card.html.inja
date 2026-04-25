@@ -1,8 +1,9 @@
 {# Card partial. Required: title (string), body (raw HTML).
-   Optional: id (DOM id), semantic ("good"|"warn"|"bad"|"info"). #}
-<section class="card{% if semantic %} card-{{ semantic }}{% endif %}"
-{% if id %}         id="{{ id }}"
-{% endif %}>
+   Optional: semantic ("good"|"warn"|"bad"|"info").
+   For OOB swap targeting, wrap the card externally:
+     <div id="my-card">{% include "partials/card" %}</div>
+#}
+<section class="card{% if semantic %} card-{{ semantic }}{% endif %}">
   <h2 class="card-title">{{ title }}</h2>
   <div class="card-body">
     {{ body }}
