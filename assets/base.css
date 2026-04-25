@@ -643,7 +643,7 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
   white-space: pre;
   line-height: 1.25;
 }
-.diff-a, .diff-b {
+.diff-num {
   flex: none;
   width: 3em;
   text-align: right;

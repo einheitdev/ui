@@ -14,6 +14,6 @@
    between the lines. #}
 <div class="diff" role="figure" aria-label="diff">
 {%- for line in diff.lines -%}
-<div class="diff-line diff-{{ line.kind }}"><span class="diff-a">{% if line.a_lineno %}{{ line.a_lineno }}{% endif %}</span><span class="diff-b">{% if line.b_lineno %}{{ line.b_lineno }}{% endif %}</span><span class="diff-mark">{% if line.kind == "add" %}+{% else if line.kind == "del" %}-{% else %} {% endif %}</span><span class="diff-text">{{ line.text }}</span></div>
+<div class="diff-line diff-{{ line.kind }}"><span class="diff-num">{% if line.kind == "del" %}{{ line.a_lineno }}{% else %}{{ line.b_lineno }}{% endif %}</span><span class="diff-mark">{% if line.kind == "add" %}+{% else if line.kind == "del" %}-{% else %} {% endif %}</span><span class="diff-text">{{ line.text }}</span></div>
 {%- endfor -%}
 </div>
