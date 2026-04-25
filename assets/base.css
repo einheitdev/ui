@@ -533,15 +533,17 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
 
 /* xterm.js cursor fade. Replaces the built-in hard blink with a
    slow opacity pulse — easier on the eyes during long sessions
-   on the /shell page. xterm renders the cursor with class
-   .xterm-cursor; the .focus parent gates this so the unfocused
-   "hollow outline" cursor stays steady. */
+   on the /shell page. xterm 5.x's DOM renderer paints the cursor
+   directly on the cell span as `.xterm-cursor.xterm-cursor-{block,
+   bar,underline}` inside `.xterm-rows`; focus is signalled by
+   `.focus` on the parent .xterm container. The `.xterm-cursor-
+   outline` modifier is the unfocused hollow look — we explicitly
+   skip it so the unfocused cursor stays steady. */
 @keyframes einheit-cursor-fade {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.25; }
 }
-.xterm.focus .xterm-cursor-layer .xterm-cursor,
-.xterm:focus .xterm-cursor-layer .xterm-cursor {
+.xterm.focus .xterm-cursor:not(.xterm-cursor-outline) {
   animation: einheit-cursor-fade 1.4s ease-in-out infinite;
 }
 .editor-analysis {
