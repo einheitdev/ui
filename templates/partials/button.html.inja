@@ -8,15 +8,11 @@
               present so the for-loop has something to iterate.
    Optional:
      semantic — primary | danger | ghost (defaults to primary)
-     icon     — Lucide icon name (e.g. "play", "rotate-ccw"); when
-                set, renders before the label. #}
+
+   To put an icon next to the label, render partials/icon
+   adjacent to this button rather than nesting it inside —
+   inja raises on missing top-level vars, so an optional icon
+   field on the button context isn't ergonomic. #}
 <button class="btn btn-{{ semantic | default("primary") }}"
 {%- for k, v in attrs %} {{ k }}="{{ v }}"{% endfor -%}
->
-{% if icon | default("") -%}
-<svg class="icon" width="14" height="14" aria-hidden="true"
-     style="margin-right:6px; vertical-align:-0.15em">
-  <use href="/assets/icons.svg#{{ icon }}"/>
-</svg>
-{%- endif -%}
-{{ label }}</button>
+>{{ label }}</button>
