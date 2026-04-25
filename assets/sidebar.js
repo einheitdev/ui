@@ -33,4 +33,15 @@
       setPinned(sidebar.dataset.pinned !== 'true');
     });
   }
+
+  // Click anywhere on the rail that isn't an interactive
+  // element (link, button, input, label) toggles pinned. Mirrors
+  // the OTC.Relay UX where the whole rail acts as a pin target.
+  sidebar.addEventListener('click', function (ev) {
+    if (ev.target.closest(
+            'a, button, input, textarea, select, label')) {
+      return;
+    }
+    setPinned(sidebar.dataset.pinned !== 'true');
+  });
 })();

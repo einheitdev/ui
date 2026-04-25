@@ -102,7 +102,20 @@ code, pre, kbd, samp {
   overflow-y: auto;
   z-index: 100;
   scrollbar-width: thin;
+  /* Whole rail acts as a pin toggle (any click outside an
+     interactive element toggles pinned) — cursor hints that. */
+  cursor: pointer;
 }
+/* Inner interactive elements get the default cursor back so
+   they don't all look like pin targets. */
+.sidebar a,
+.sidebar button,
+.sidebar input,
+.sidebar select,
+.sidebar textarea { cursor: pointer; }
+.sidebar input,
+.sidebar select,
+.sidebar textarea { cursor: text; }
 .sidebar:hover,
 .sidebar[data-pinned="true"] { width: 17.5rem; }
 
