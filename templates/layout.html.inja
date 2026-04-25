@@ -51,5 +51,8 @@
   <script src="/assets/plot.js"></script>
   <script src="/assets/copy.js"></script>
   <script src="/assets/toasts.js"></script>
+  <script src="/assets/tabs.js"></script>
+  <script src="/assets/filter.js"></script>
+  <script src="/assets/time_range.js"></script>
 </body>
 </html>
