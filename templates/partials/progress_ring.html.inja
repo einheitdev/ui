@@ -1,0 +1,40 @@
+{# Circular progress gauge — for compact CPU / GPU / network
+   load indicators. SVG with a single stroke arc; the arc length
+   is computed server-side from the value/max ratio.
+
+   Required:
+     ring.value      — current numeric value
+     ring.max        — maximum (typically 100)
+     ring.semantic   — good | warn | bad | info | accent
+   Optional:
+     ring.size       — pixel diameter (default 64)
+     ring.label      — text inside the ring (defaults to "<pct>%")
+     ring.thickness  — stroke width (default 6)
+     ring.dasharray  — pre-computed `<filled> <total>` string
+                       passed by the caller via
+                       std::format("{:.1f} {:.1f}", filled, total)
+                       where total is the circle circumference
+                       (2 * π * radius). Avoids fighting inja's
+                       lack of math operators.
+#}
+<svg class="ring ring-{{ ring.semantic | default("info") }}"
+     width="{{ ring.size | default(64) }}"
+     height="{{ ring.size | default(64) }}"
+     viewBox="0 0 64 64"
+     role="progressbar"
+     aria-valuenow="{{ ring.value }}" aria-valuemin="0"
+     aria-valuemax="{{ ring.max }}">
+  <circle class="ring-bg"
+          cx="32" cy="32" r="28"
+          fill="none"
+          stroke-width="{{ ring.thickness | default(6) }}"/>
+  <circle class="ring-fg"
+          cx="32" cy="32" r="28"
+          fill="none"
+          stroke-width="{{ ring.thickness | default(6) }}"
+          stroke-dasharray="{{ ring.dasharray }}"
+          transform="rotate(-90 32 32)"/>
+  <text class="ring-text" x="32" y="36" text-anchor="middle">
+    {{ ring.label }}
+  </text>
+</svg>

@@ -1,0 +1,13 @@
+{# Card-shaped placeholder for data-loading states. CSS handles
+   the pulse animation. Render the partial in adapter handlers
+   that hand off the real fetch to htmx (hx-get on the parent +
+   hx-trigger on load) so the operator sees a placeholder
+   instead of an empty card while the upstream call is in flight.
+
+   Three short bars by default; caller wanting a different
+   shape can replicate the markup directly. #}
+<div class="skeleton" aria-busy="true" aria-live="polite">
+  <div class="skeleton-row" style="width: 70%"></div>
+  <div class="skeleton-row" style="width: 90%"></div>
+  <div class="skeleton-row" style="width: 50%"></div>
+</div>

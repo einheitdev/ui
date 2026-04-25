@@ -117,6 +117,19 @@ class EventStream {
   /// Number of currently connected subscribers. Useful in metrics.
   auto SubscriberCount() const -> std::size_t;
 
+  /// Push a transient toast notification to every connected
+  /// browser. Renders `partials/toast` with a severity-derived
+  /// icon and OOB-swaps it into the layout's `#toasts` stack.
+  /// `severity` is one of: `good` | `warn` | `bad` | `info`.
+  /// Empty string falls back to `info`. Adapters call this for
+  /// short-lived feedback ("peer approved", "rule rejected") —
+  /// long-lived state still goes through the topic-binding
+  /// fragment system.
+  /// @param severity Semantic class.
+  /// @param text Human-readable message.
+  auto PublishToast(std::string_view severity,
+                    std::string_view text) -> void;
+
   // ----------------------------------------------------------
   // Metric stream. Same EventStream object hosts a second
   // WebSocket endpoint at /metrics/ws that carries typed JSON

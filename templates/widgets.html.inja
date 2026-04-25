@@ -1,0 +1,242 @@
+{# Widget gallery / kitchen-sink. Demos every partial the
+   framework ships, side-by-side, so adapter authors can scan
+   what's available and copy the markup. The route handler in
+   binaries/einheit-ui/src/main.cc precomputes every value the
+   templates expect (diff lines, sparkline polylines, ring
+   dasharrays, tile sub-objects). #}
+<section class="card">
+  <h2 class="card-title">stat tiles</h2>
+  <div class="card-body">
+    <div class="stat-grid">
+{% set tile = tile_throughput %}
+{% include "partials/stat_tile" %}
+{% set tile = tile_peers %}
+{% include "partials/stat_tile" %}
+{% set tile = tile_drops %}
+{% include "partials/stat_tile" %}
+{% set tile = tile_authfail %}
+{% include "partials/stat_tile" %}
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">progress + rings</h2>
+  <div class="card-body">
+    <div class="field-row" style="align-items: center; gap: 32px">
+      <svg class="ring ring-good" width="64" height="64"
+           viewBox="0 0 64 64" role="progressbar">
+        <circle class="ring-bg" cx="32" cy="32" r="28"
+                fill="none" stroke-width="6"/>
+        <circle class="ring-fg" cx="32" cy="32" r="28"
+                fill="none" stroke-width="6"
+                stroke-dasharray="{{ ring_cpu_dash }}"
+                transform="rotate(-90 32 32)"/>
+        <text class="ring-text" x="32" y="36"
+              text-anchor="middle">72%</text>
+      </svg>
+      <svg class="ring ring-info" width="64" height="64"
+           viewBox="0 0 64 64" role="progressbar">
+        <circle class="ring-bg" cx="32" cy="32" r="28"
+                fill="none" stroke-width="6"/>
+        <circle class="ring-fg" cx="32" cy="32" r="28"
+                fill="none" stroke-width="6"
+                stroke-dasharray="{{ ring_gpu_dash }}"
+                transform="rotate(-90 32 32)"/>
+        <text class="ring-text" x="32" y="36"
+              text-anchor="middle">34%</text>
+      </svg>
+      <svg class="ring ring-warn" width="64" height="64"
+           viewBox="0 0 64 64" role="progressbar">
+        <circle class="ring-bg" cx="32" cy="32" r="28"
+                fill="none" stroke-width="6"/>
+        <circle class="ring-fg" cx="32" cy="32" r="28"
+                fill="none" stroke-width="6"
+                stroke-dasharray="{{ ring_net_dash }}"
+                transform="rotate(-90 32 32)"/>
+        <text class="ring-text" x="32" y="36"
+              text-anchor="middle">89%</text>
+      </svg>
+    </div>
+    <div style="margin-top: 16px; max-width: 320px">
+      <div class="progress">
+        <div class="progress-label">rule sync</div>
+        <div class="progress-track">
+          <div class="progress-fill progress-good"
+               style="width: 100%"></div>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="progress-label">schema upload</div>
+        <div class="progress-track">
+          <div class="progress-fill progress-info"
+               style="width: 60%"></div>
+        </div>
+      </div>
+      <div class="progress">
+        <div class="progress-label">rolling restart</div>
+        <div class="progress-track">
+          <div class="progress-fill progress-warn"
+               style="width: 30%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">form inputs</h2>
+  <div class="card-body">
+    <div class="field-row">
+      <div class="field" style="flex:1; min-width:180px">
+        <label for="w-host">hostname</label>
+        <input id="w-host" type="text" value="relay-01">
+        <p class="field-help">used by the daemon for audit stamps</p>
+      </div>
+      <div class="field" style="flex:1; min-width:180px">
+        <label for="w-mode">enroll mode</label>
+        <select id="w-mode">
+          <option>manual</option>
+          <option>fleet</option>
+          <option selected>auto</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1; min-width:180px">
+        <label for="w-port">control port</label>
+        <input id="w-port" type="number" value="7541">
+      </div>
+    </div>
+    <div class="field">
+      <label for="w-policy">policy snippet</label>
+      <textarea id="w-policy" rows="3">allow tcp/22 from 10.0.0.0/8;
+deny tcp/22 from any;</textarea>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" checked>
+      <span class="toggle-slider"></span>
+      <span class="toggle-text">audit log enabled</span>
+    </label>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">tabs</h2>
+  <div class="card-body">
+    <div class="tabs" data-active="overview">
+{% set tabs = tabs_demo %}
+{% include "partials/tabs" %}
+      <div class="tabs-panel active" data-tab-slug="overview">
+        operator-facing summary lives here.
+      </div>
+      <div class="tabs-panel" data-tab-slug="config">
+        config form / yaml editor would slot in.
+      </div>
+      <div class="tabs-panel" data-tab-slug="audit">
+        recent audit entries.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">filter + tooltip + copy + skeleton</h2>
+  <div class="card-body">
+{% set filter = filter_demo %}
+{% include "partials/filter" %}
+    <div style="font-size:11px;color:var(--einheit-fg3);margin-bottom:8px">
+      <span id="widget-row-count">5</span> rows
+    </div>
+    <table class="data-table">
+      <thead><tr>
+        <th>peer key</th><th>state</th><th class="right">actions</th>
+      </tr></thead>
+      <tbody id="widget-rows">
+        <tr>
+          <td>ck_alpha
+{% set copy = copy_alpha %}
+{% include "partials/copy" %}
+          </td>
+          <td><span class="badge badge-good">approved</span></td>
+          <td class="right">
+            <button class="btn btn-ghost"
+                    data-tooltip="audit-trace this peer">trace</button>
+          </td>
+        </tr>
+        <tr>
+          <td>ck_bravo
+{% set copy = copy_bravo %}
+{% include "partials/copy" %}
+          </td>
+          <td><span class="badge badge-warn">pending</span></td>
+          <td class="right"><button class="btn btn-primary">approve</button></td>
+        </tr>
+        <tr>
+          <td>ck_charlie
+{% set copy = copy_charlie %}
+{% include "partials/copy" %}
+          </td>
+          <td><span class="badge badge-bad">denied</span></td>
+          <td class="right"><button class="btn btn-ghost">unblock</button></td>
+        </tr>
+        <tr>
+          <td>ck_delta
+{% set copy = copy_delta %}
+{% include "partials/copy" %}
+          </td>
+          <td><span class="badge badge-good">approved</span></td>
+          <td class="right"><button class="btn btn-ghost">trace</button></td>
+        </tr>
+        <tr>
+          <td>ck_echo
+{% set copy = copy_echo %}
+{% include "partials/copy" %}
+          </td>
+          <td><span class="badge badge-info">enrolling</span></td>
+          <td class="right">—</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px">
+      <div class="card-title" style="margin-bottom:6px">
+        skeleton (loading state)
+      </div>
+{% include "partials/skeleton" %}
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">time range + diff</h2>
+  <div class="card-body">
+{% set time_range = time_range_demo %}
+{% include "partials/time_range" %}
+    <div style="margin-top:8px">
+{% include "partials/diff" %}
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">toasts</h2>
+  <div class="card-body">
+    <p style="margin:0 0 12px 0;color:var(--einheit-fg2)">
+      Each button POSTs to /widgets/_toast which calls
+      events->PublishToast(...) — the toast shows up via the
+      same /events WebSocket every adapter's notifications use.
+    </p>
+    <div class="field-row">
+      <button class="btn btn-ghost"
+              hx-post="/widgets/_toast?severity=good&text=peer%20approved"
+              hx-swap="none">throw good</button>
+      <button class="btn btn-ghost"
+              hx-post="/widgets/_toast?severity=info&text=catalog%20refreshed"
+              hx-swap="none">throw info</button>
+      <button class="btn btn-ghost"
+              hx-post="/widgets/_toast?severity=warn&text=rate%20limit%20hit"
+              hx-swap="none">throw warn</button>
+      <button class="btn btn-danger"
+              hx-post="/widgets/_toast?severity=bad&text=verifier%20rejected%20rule%2017"
+              hx-swap="none">throw bad</button>
+    </div>
+  </div>
+</section>

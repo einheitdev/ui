@@ -45,7 +45,11 @@
   <main class="app-main">
     <!--EINHEIT_BODY-->
   </main>
+  <div id="toasts" class="toast-stack" aria-live="polite"
+       aria-atomic="false"></div>
   <script src="/assets/sidebar.js"></script>
   <script src="/assets/plot.js"></script>
+  <script src="/assets/copy.js"></script>
+  <script src="/assets/toasts.js"></script>
 </body>
 </html>

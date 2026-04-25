@@ -1,0 +1,22 @@
+{# Toast notification. Rendered by EventStream::PublishToast and
+   OOB-swapped into the layout's #toasts stack. Auto-dismisses
+   after data-toast-life ms (set client-side by toasts.js).
+
+   Required:
+     severity — good | warn | bad | info
+     icon     — Lucide icon name selected by PublishToast
+     text     — message body
+#}
+<div class="toast toast-{{ severity }}" data-toast-life="4500">
+  <svg class="icon toast-icon" width="16" height="16"
+       aria-hidden="true">
+    <use href="/assets/icons.svg#{{ icon }}"/>
+  </svg>
+  <span class="toast-text">{{ text }}</span>
+  <button type="button" class="toast-close"
+          aria-label="dismiss notification">
+    <svg class="icon" width="12" height="12" aria-hidden="true">
+      <use href="/assets/icons.svg#x"/>
+    </svg>
+  </button>
+</div>

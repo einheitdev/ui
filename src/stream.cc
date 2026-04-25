@@ -130,6 +130,44 @@ auto EventStream::SubscriberCount() const -> std::size_t {
   return impl_->connections.size();
 }
 
+auto EventStream::PublishToast(std::string_view severity,
+                               std::string_view text) -> void {
+  // Severity maps to a Lucide icon from the vendored sprite.
+  std::string sev{severity};
+  if (sev != "good" && sev != "warn" && sev != "bad" &&
+      sev != "info") {
+    sev = "info";
+  }
+  std::string icon = "info";
+  if (sev == "good") icon = "circle-check";
+  else if (sev == "warn") icon = "triangle-alert";
+  else if (sev == "bad") icon = "circle-x";
+
+  nlohmann::json ctx{
+      {"severity", sev},
+      {"icon", icon},
+      {"text", std::string{text}},
+  };
+  auto rendered = impl_->eng->Render("partials/toast", ctx);
+  if (!rendered) {
+    spdlog::warn("toast render failed: {}",
+                 rendered.error().message);
+    return;
+  }
+  // OOB swap into the layout's #toasts stack. afterbegin so the
+  // newest toast lands at the top.
+  const auto frame = std::format(
+      R"(<div hx-swap-oob="afterbegin:#toasts">{}</div>)",
+      *rendered);
+  std::vector<crow::websocket::connection *> snap;
+  {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    snap.reserve(impl_->connections.size());
+    for (auto *c : impl_->connections) snap.push_back(c);
+  }
+  for (auto *c : snap) c->send_text(frame);
+}
+
 auto EventStream::PublishData(std::string_view topic,
                               const nlohmann::json &point) -> void {
   // Append to ring buffer, prune to capacity, snapshot the

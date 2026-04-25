@@ -1,0 +1,25 @@
+{# Time-range pill toggle. Sits above plot partials and the
+   audit page; each button is an htmx GET that swaps the
+   target element with the server's response for that range.
+
+   Required:
+     time_range.target  — hx-target selector (e.g. "#counters-card")
+     time_range.url     — base URL the buttons hit; ranges append
+                          as ?range=<slug>
+     time_range.active  — slug of the currently-selected range
+     time_range.options — array of {slug, label}. The canonical
+                          set is [1h, 6h, 24h, 7d]; pass a
+                          different list for adapter-specific
+                          ranges.
+#}
+<div class="time-range" role="group" aria-label="time range">
+{% for opt in time_range.options %}
+  <button type="button"
+          class="time-range-opt{% if opt.slug == time_range.active %} active{% endif %}"
+          hx-get="{{ time_range.url }}?range={{ opt.slug }}"
+          hx-target="{{ time_range.target }}"
+          hx-swap="outerHTML">
+    {{ opt.label }}
+  </button>
+{% endfor %}
+</div>

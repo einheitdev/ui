@@ -1,0 +1,32 @@
+{# Copy-to-clipboard button. Renders a small icon button that
+   copies a server-supplied value (or the text content of a
+   sibling selector) to the clipboard on click.
+
+   Required:
+     copy.value      — the text to copy on click. (Use empty
+                       string and set copy.selector instead to
+                       read from a CSS-matching element at click
+                       time.)
+     copy.selector   — alternative to copy.value; CSS selector
+                       whose text content gets read on click.
+                       Useful for copying a value that lives in
+                       a long-lived element rather than baking
+                       it into the button's data attribute.
+     copy.label      — accessible label / tooltip (e.g. "copy
+                       peer key").
+#}
+<button type="button"
+        class="copy-btn"
+        data-copy-value="{{ copy.value | default("") }}"
+        data-copy-selector="{{ copy.selector | default("") }}"
+        data-tooltip="{{ copy.label }}"
+        aria-label="{{ copy.label }}">
+  <svg class="icon copy-icon-default" width="14" height="14"
+       aria-hidden="true">
+    <use href="/assets/icons.svg#copy"/>
+  </svg>
+  <svg class="icon copy-icon-done" width="14" height="14"
+       aria-hidden="true">
+    <use href="/assets/icons.svg#check"/>
+  </svg>
+</button>

@@ -1,0 +1,26 @@
+{# Live client-side filter for a sibling table or list. The
+   input's data-filter-target is a CSS selector resolved relative
+   to document; matching ROWS that don't contain the typed
+   substring are hidden via display:none.
+
+   Required:
+     filter.target      — CSS selector for the rows to filter
+                          (e.g. ".peers-table tbody tr" or
+                          ".audit-log .log-entry").
+     filter.placeholder — input placeholder, e.g. "filter peers"
+   Optional:
+     filter.counter_id  — id of an element to receive a "X of Y"
+                          string updated as the input changes.
+                          Caller writes the element separately.
+#}
+<div class="filter">
+  <svg class="icon filter-icon" width="14" height="14" aria-hidden="true">
+    <use href="/assets/icons.svg#search"/>
+  </svg>
+  <input type="search"
+         class="filter-input"
+         data-filter-target="{{ filter.target }}"
+         data-filter-counter="{{ filter.counter_id | default("") }}"
+         placeholder="{{ filter.placeholder }}"
+         autocomplete="off">
+</div>

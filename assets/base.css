@@ -448,6 +448,613 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
 }
 
 /* ---------------------------------------------------------------
+   Linear progress bar + circular progress ring. Both pull stroke
+   colour from --einheit-* via the progress-{semantic} / ring-
+   {semantic} classes.
+   --------------------------------------------------------------- */
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-family: var(--einheit-font-sans);
+}
+.progress-label {
+  font-size: 11px;
+  color: var(--einheit-fg3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.progress-track {
+  height: 6px;
+  background: var(--einheit-bg2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 200ms ease;
+}
+.progress-good   { background: var(--einheit-good); }
+.progress-warn   { background: var(--einheit-warn); }
+.progress-bad    { background: var(--einheit-bad); }
+.progress-info   { background: var(--einheit-info); }
+.progress-accent { background: var(--einheit-accent); }
+.progress-pct {
+  font-family: var(--einheit-font-mono);
+  font-size: 11px;
+  color: var(--einheit-fg2);
+}
+
+.ring {
+  display: inline-block;
+  vertical-align: middle;
+}
+.ring .ring-bg { stroke: var(--einheit-bg2); }
+.ring .ring-fg {
+  stroke: var(--einheit-info);
+  stroke-linecap: round;
+  transition: stroke-dasharray 200ms ease;
+}
+.ring.ring-good .ring-fg   { stroke: var(--einheit-good); }
+.ring.ring-warn .ring-fg   { stroke: var(--einheit-warn); }
+.ring.ring-bad .ring-fg    { stroke: var(--einheit-bad); }
+.ring.ring-info .ring-fg   { stroke: var(--einheit-info); }
+.ring.ring-accent .ring-fg { stroke: var(--einheit-accent); }
+.ring .ring-text {
+  font-family: var(--einheit-font-mono);
+  font-size: 13px;
+  fill: var(--einheit-fg);
+}
+
+/* ---------------------------------------------------------------
+   Skeleton loader. Subtle grey bars with a pulse animation.
+   --------------------------------------------------------------- */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+.skeleton-row {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+      var(--einheit-bg1) 0%,
+      var(--einheit-bg2) 50%,
+      var(--einheit-bg1) 100%);
+  background-size: 200% 100%;
+  animation: einheit-skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes einheit-skeleton-pulse {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ---------------------------------------------------------------
+   Time-range pill toggle. Each option is a thin button with a
+   single .active state.
+   --------------------------------------------------------------- */
+.time-range {
+  display: inline-flex;
+  border: 1px solid var(--einheit-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  font-family: var(--einheit-font-mono);
+  font-size: 12px;
+}
+.time-range-opt {
+  background: transparent;
+  border: 0;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--einheit-fg3);
+  border-right: 1px solid var(--einheit-border);
+  transition: background 100ms ease, color 100ms ease;
+}
+.time-range-opt:last-child { border-right: 0; }
+.time-range-opt:hover {
+  color: var(--einheit-fg);
+  background: var(--einheit-bg2);
+}
+.time-range-opt.active {
+  color: var(--einheit-bg);
+  background: var(--einheit-accent);
+}
+
+/* ---------------------------------------------------------------
+   Live filter input. The icon sits inside the input visually via
+   absolute positioning + extra padding-left.
+   --------------------------------------------------------------- */
+.filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 12px;
+}
+.filter-icon {
+  position: absolute;
+  left: 8px;
+  color: var(--einheit-fg3);
+  pointer-events: none;
+}
+.filter-input {
+  width: 100%;
+  padding-left: 28px;
+}
+
+/* ---------------------------------------------------------------
+   Tabs. .tabs-strip is the row of buttons; .tabs-panel divs are
+   siblings, only the .active one is shown. Caller writes the
+   markup; tabs.js handles click-to-flip.
+   --------------------------------------------------------------- */
+.tabs-strip {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--einheit-border);
+  margin-bottom: 16px;
+}
+.tabs-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--einheit-fg3);
+  font-family: var(--einheit-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: -1px;
+  transition: color 100ms ease, border-color 100ms ease;
+}
+.tabs-tab:hover { color: var(--einheit-fg); }
+.tabs-tab.active {
+  color: var(--einheit-fg);
+  border-bottom-color: var(--einheit-accent);
+}
+.tabs-panel { display: none; }
+.tabs-panel.active { display: block; }
+
+/* ---------------------------------------------------------------
+   Diff. Unified-style line diff with line numbers + a +/- mark
+   column. Each line is a flex row so text wraps cleanly without
+   breaking column alignment.
+   --------------------------------------------------------------- */
+.diff {
+  background: var(--einheit-bg);
+  border: 1px solid var(--einheit-border);
+  border-radius: 6px;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+  font-family: var(--einheit-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.diff-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 12px;
+  white-space: pre;
+}
+.diff-a, .diff-b {
+  flex: none;
+  width: 3em;
+  text-align: right;
+  color: var(--einheit-fg3);
+  user-select: none;
+}
+.diff-mark {
+  flex: none;
+  width: 1em;
+  font-weight: 600;
+  user-select: none;
+}
+.diff-text { flex: 1; min-width: 0; white-space: pre-wrap; }
+.diff-add  { background: color-mix(in srgb, var(--einheit-good) 8%, transparent); color: var(--einheit-good); }
+.diff-add  .diff-text { color: var(--einheit-fg); }
+.diff-add  .diff-mark { color: var(--einheit-good); }
+.diff-del  { background: color-mix(in srgb, var(--einheit-bad) 8%, transparent); color: var(--einheit-bad); }
+.diff-del  .diff-text { color: var(--einheit-fg); }
+.diff-del  .diff-mark { color: var(--einheit-bad); }
+.diff-ctx  .diff-text { color: var(--einheit-fg2); }
+
+/* ---------------------------------------------------------------
+   Toast stack. Server-pushed transient notifications; OOB-swapped
+   into #toasts at the body bottom. New toasts slide in from the
+   right; auto-dismissed by toasts.js after a timeout.
+   --------------------------------------------------------------- */
+.toast-stack {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  pointer-events: none;
+  max-width: 360px;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--einheit-bg1);
+  color: var(--einheit-fg);
+  border: 1px solid var(--einheit-border);
+  border-left-width: 3px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+  animation: einheit-toast-in 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toast-good { border-left-color: var(--einheit-good); }
+.toast-good .toast-icon { color: var(--einheit-good); }
+.toast-warn { border-left-color: var(--einheit-warn); }
+.toast-warn .toast-icon { color: var(--einheit-warn); }
+.toast-bad  { border-left-color: var(--einheit-bad); }
+.toast-bad  .toast-icon { color: var(--einheit-bad); }
+.toast-info { border-left-color: var(--einheit-info); }
+.toast-info .toast-icon { color: var(--einheit-info); }
+
+.toast-text { flex: 1; }
+.toast-close {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--einheit-fg3);
+  padding: 2px;
+}
+.toast-close:hover { color: var(--einheit-fg); }
+.toast-leaving {
+  animation: einheit-toast-out 220ms ease-in forwards;
+}
+
+@keyframes einheit-toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes einheit-toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+
+/* ---------------------------------------------------------------
+   Copy button. Tiny icon button typically inlined next to a
+   monospace value (key, ID, IP). The .copy-icon-done variant
+   only shows briefly after a successful copy via the
+   .copy-done class added by copy.js.
+   --------------------------------------------------------------- */
+.copy-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 5px;
+  cursor: pointer;
+  color: var(--einheit-fg3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 100ms ease, background 100ms ease,
+              border-color 100ms ease;
+}
+.copy-btn:hover {
+  color: var(--einheit-fg);
+  background: var(--einheit-bg2);
+  border-color: var(--einheit-border);
+}
+.copy-btn .copy-icon-done { display: none; }
+.copy-btn.copy-done {
+  color: var(--einheit-good);
+}
+.copy-btn.copy-done .copy-icon-default { display: none; }
+.copy-btn.copy-done .copy-icon-done { display: inline-block; }
+
+/* ---------------------------------------------------------------
+   Tooltip. Pure CSS via ::after / ::before pseudos. Apply
+   `data-tooltip="..."` to any element; on hover or keyboard
+   focus a styled bubble appears above. Position is relative
+   to the host (which gets position: relative implicitly via
+   the rule); a small caret points down.
+
+   Direction overrides: data-tooltip-pos="bottom"|"left"|"right"
+   for cases where above clips off-screen.
+   --------------------------------------------------------------- */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::after,
+[data-tooltip]::before {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms ease 200ms;
+  z-index: 200;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--einheit-bg1);
+  color: var(--einheit-fg);
+  border: 1px solid var(--einheit-border);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: var(--einheit-font-sans);
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+[data-tooltip]::before {
+  content: "";
+  bottom: calc(100% + 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--einheit-border);
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::after,
+[data-tooltip]:focus-visible::before {
+  opacity: 1;
+}
+
+[data-tooltip-pos="bottom"]::after {
+  bottom: auto; top: calc(100% + 6px);
+}
+[data-tooltip-pos="bottom"]::before {
+  bottom: auto; top: calc(100% + 1px);
+  border-top-color: transparent;
+  border-bottom-color: var(--einheit-border);
+}
+[data-tooltip-pos="left"]::after {
+  bottom: 50%; left: auto; right: calc(100% + 6px);
+  transform: translateY(50%);
+}
+[data-tooltip-pos="left"]::before {
+  bottom: 50%; left: auto; right: calc(100% + 1px);
+  transform: translateY(50%);
+  border-top-color: transparent;
+  border-left-color: var(--einheit-border);
+}
+[data-tooltip-pos="right"]::after {
+  bottom: 50%; left: calc(100% + 6px);
+  transform: translateY(50%);
+}
+[data-tooltip-pos="right"]::before {
+  bottom: 50%; left: calc(100% + 1px);
+  transform: translateY(50%);
+  border-top-color: transparent;
+  border-right-color: var(--einheit-border);
+}
+
+/* ---------------------------------------------------------------
+   Form inputs. Style every native control to the framework
+   palette so adapters can write plain `<input>`/`<select>`/
+   `<textarea>` and have it match the rest of the UI without a
+   wrapper partial. The toggle/switch is the one shape that
+   needs JS-free markup help: a label.toggle wrapping a hidden
+   checkbox + a styled .toggle-slider span.
+   --------------------------------------------------------------- */
+input[type="text"], input[type="number"], input[type="email"],
+input[type="password"], input[type="search"], input[type="tel"],
+input[type="url"], input[type="date"], input[type="datetime-local"],
+input[type="time"], textarea, select {
+  background: var(--einheit-bg);
+  color: var(--einheit-fg);
+  border: 1px solid var(--einheit-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-family: var(--einheit-font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  transition: border-color 120ms ease, background 120ms ease;
+  min-width: 0;
+}
+textarea {
+  font-family: var(--einheit-font-mono);
+  resize: vertical;
+}
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid var(--einheit-accent);
+  outline-offset: 1px;
+  border-color: var(--einheit-accent);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--einheit-fg3);
+}
+input:disabled, textarea:disabled, select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Native select arrow is browser-specific and ugly; replace with
+   our chevron via background image (URL-encoded SVG, currentColor
+   approximated by a fg-tone fill). */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a8b94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px 14px;
+  padding-right: 28px;
+}
+
+/* Native checkbox/radio with the framework's accent. */
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--einheit-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* Toggle / switch — wraps a hidden checkbox.
+   <label class="toggle">
+     <input type="checkbox">
+     <span class="toggle-slider"></span>
+     <span class="toggle-text">Enabled</span>
+   </label>
+*/
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  background: var(--einheit-bg2);
+  border-radius: 9px;
+  border: 1px solid var(--einheit-border);
+  transition: background 120ms ease, border-color 120ms ease;
+  flex: none;
+}
+.toggle-slider::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  background: var(--einheit-fg2);
+  border-radius: 50%;
+  transition: transform 150ms ease, background 120ms ease;
+}
+.toggle input:checked + .toggle-slider {
+  background: color-mix(in srgb, var(--einheit-accent) 25%, var(--einheit-bg2));
+  border-color: var(--einheit-accent);
+}
+.toggle input:checked + .toggle-slider::after {
+  transform: translateX(14px);
+  background: var(--einheit-accent);
+}
+.toggle input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--einheit-accent);
+  outline-offset: 2px;
+}
+.toggle-text {
+  font-size: 13px;
+  color: var(--einheit-fg2);
+}
+
+/* Field wrapper — vertical label/input/help layout. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.field > label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--einheit-fg3);
+  font-weight: 500;
+}
+.field-help {
+  margin: 0;
+  font-size: 11px;
+  color: var(--einheit-fg3);
+}
+.field-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------
+   Stat tile. KPI card with big value, label, optional delta
+   chip + sparkline. Theme-tinted via .stat-good / .stat-warn /
+   etc. Sparkline strokes inherit currentColor so the same class
+   tints the curve.
+   --------------------------------------------------------------- */
+.stat-tile {
+  background: var(--einheit-bg1);
+  border: 1px solid var(--einheit-border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stat-value {
+  font-family: var(--einheit-font-mono);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--einheit-fg);
+}
+.stat-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--einheit-fg3);
+}
+.stat-delta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.stat-delta.stat-up {
+  color: var(--einheit-good);
+  background: color-mix(in srgb, var(--einheit-good) 12%, transparent);
+}
+.stat-delta.stat-down {
+  color: var(--einheit-bad);
+  background: color-mix(in srgb, var(--einheit-bad) 12%, transparent);
+}
+.stat-sparkline {
+  width: 100%;
+  height: 24px;
+  margin-top: 2px;
+  color: var(--einheit-info);
+}
+.stat-tile.stat-good  .stat-value, .stat-tile.stat-good  .stat-sparkline { color: var(--einheit-good); }
+.stat-tile.stat-warn  .stat-value, .stat-tile.stat-warn  .stat-sparkline { color: var(--einheit-warn); }
+.stat-tile.stat-bad   .stat-value, .stat-tile.stat-bad   .stat-sparkline { color: var(--einheit-bad); }
+.stat-tile.stat-info  .stat-value, .stat-tile.stat-info  .stat-sparkline { color: var(--einheit-info); }
+.stat-tile.stat-accent .stat-value, .stat-tile.stat-accent .stat-sparkline { color: var(--einheit-accent); }
+
+/* Grid wrapper — drop a row of tiles in. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* ---------------------------------------------------------------
    Realtime plots. <figure class="plot"> with a .plot-caption
    and a .plot-host (where uPlot renders). The host fills the
    figure minus the caption row; uPlot's resize observer keeps

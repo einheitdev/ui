@@ -1,0 +1,42 @@
+{# KPI tile — big number + label, optional delta percentage and
+   inline sparkline. Server-rendered, no JS. Caller passes a
+   single `tile` object (matches the stack-of-set-and-include
+   pattern partials/plot uses).
+
+   tile.value           — string shown as the big number (already
+                          formatted by the caller, e.g. "12.4 MiB"
+                          or "1,247")
+   tile.label           — small caption beneath the value
+   tile.semantic        — optional: good | warn | bad | info |
+                          accent. Tints the value text.
+   tile.delta_pct       — optional signed number; 0/missing hides
+                          the chip
+   tile.delta_unit      — optional string after the number
+                          (defaults to "%")
+   tile.sparkline_points — optional polyline points string built
+                          via ui::SparklinePoints(...). Empty
+                          string hides the sparkline.
+
+   Caller pattern (template):
+     {% set tile = my_tile %}
+     {% include "partials/stat_tile" %}
+#}
+<div class="stat-tile{% if tile.semantic %} stat-{{ tile.semantic }}{% endif %}">
+  <div class="stat-row">
+    <div class="stat-value">{{ tile.value }}</div>
+{% if tile.delta_pct %}
+    <div class="stat-delta{% if tile.delta_pct > 0 %} stat-up{% else %} stat-down{% endif %}">
+      <span aria-hidden="true">{% if tile.delta_pct > 0 %}↑{% else %}↓{% endif %}</span>
+      {{ tile.delta_pct }}{{ tile.delta_unit | default("%") }}
+    </div>
+{% endif %}
+  </div>
+  <div class="stat-label">{{ tile.label }}</div>
+{% if tile.sparkline_points %}
+  <svg class="stat-sparkline" viewBox="0 0 60 20"
+       preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="{{ tile.sparkline_points }}"
+              fill="none" stroke="currentColor" stroke-width="1.2"/>
+  </svg>
+{% endif %}
+</div>

@@ -1,0 +1,26 @@
+{# Progress bar (linear). For percentage gauges (CPU / GPU /
+   network load) use partials/progress_ring instead.
+
+   Required:
+     progress.value    — current numeric value
+     progress.max      — maximum (typically 100)
+     progress.semantic — good | warn | bad | info | accent
+   Optional:
+     progress.label    — small caption above the bar
+     progress.show_pct — when truthy, renders "<value>%" beside
+                         the bar
+#}
+<div class="progress" role="progressbar"
+     aria-valuenow="{{ progress.value }}" aria-valuemin="0"
+     aria-valuemax="{{ progress.max }}">
+{% if progress.label %}
+  <div class="progress-label">{{ progress.label }}</div>
+{% endif %}
+  <div class="progress-track">
+    <div class="progress-fill progress-{{ progress.semantic | default("info") }}"
+         style="width: {{ progress.value * 100 / progress.max }}%"></div>
+  </div>
+{% if progress.show_pct %}
+  <div class="progress-pct">{{ progress.value * 100 / progress.max }}%</div>
+{% endif %}
+</div>

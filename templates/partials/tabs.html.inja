@@ -1,0 +1,34 @@
+{# Tabs strip. Renders the row of tab buttons; the caller writes
+   the panel divs directly so each panel can include arbitrary
+   server-rendered HTML without fighting inja's autoescape.
+
+   Required:
+     tabs.entries — array of {slug, label}
+     tabs.active  — slug of the active panel
+
+   Convention for the surrounding markup:
+
+     <div class="tabs" data-active="overview">
+       {% set tabs = my_tabs %}
+       {% include "partials/tabs" %}
+       <div class="tabs-panel active" data-tab-slug="overview">
+         ... overview content ...
+       </div>
+       <div class="tabs-panel" data-tab-slug="config">
+         ... config content ...
+       </div>
+     </div>
+
+   tabs.js (loaded at body bottom) listens for clicks on
+   .tabs-tab and toggles .active on the tab + matching panel.
+#}
+<div class="tabs-strip" role="tablist">
+{% for entry in tabs.entries %}
+  <button type="button" role="tab"
+          class="tabs-tab{% if entry.slug == tabs.active %} active{% endif %}"
+          data-tab-target="{{ entry.slug }}"
+          aria-selected="{% if entry.slug == tabs.active %}true{% else %}false{% endif %}">
+    {{ entry.label }}
+  </button>
+{% endfor %}
+</div>

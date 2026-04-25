@@ -22,6 +22,8 @@
 #include "einheit/adapters/hd_relay/ui_adapter.h"
 #include "einheit/adapters/shell/ui_adapter.h"
 #include "einheit/ui/adapter.h"
+#include "einheit/ui/diff.h"
+#include "einheit/ui/sparkline.h"
 #include "einheit/ui/render/template_engine.h"
 #include "einheit/ui/route.h"
 #include "einheit/ui/server.h"
@@ -297,6 +299,103 @@ auto main(int argc, char **argv) -> int {
     }
     return std::move(*r);
   });
+
+  // /widgets — manual gallery / kitchen sink. Demos every partial
+  // in one place; doubles as a smoke-test surface and onboarding
+  // reference for whoever writes the next adapter.
+  CROW_ROUTE(crow_app, "/widgets")
+  ([&engine](const crow::request &req) {
+    auto example_diff = einheit::ui::Diff(
+        "version: 1\nhostname: relay-old\nworkers: 4\n",
+        "version: 2\nhostname: relay-01\nworkers: 8\n"
+        "audit: enabled\n");
+    // Pre-computed dasharrays for the rings: r=28, circumference
+    // = 2*pi*28 ≈ 175.929. percent → filled length.
+    constexpr double kCirc = 175.929;
+    auto ring = [&](double pct) {
+      return std::format("{:.2f} {:.2f}", kCirc * pct / 100.0,
+                         kCirc);
+    };
+    const auto spark_a = einheit::ui::SparklinePoints(
+        {3.0, 5.0, 4.0, 7.0, 6.0, 8.0, 9.0, 7.0, 8.0, 11.0});
+    const auto spark_b = einheit::ui::SparklinePoints(
+        {12.0, 11.0, 10.5, 11.5, 10.0, 9.5, 9.0, 8.0, 7.5, 7.0});
+    nlohmann::json data;
+    data["diff"] = einheit::ui::DiffToJson(example_diff);
+    data["ring_cpu_dash"] = ring(72);
+    data["ring_gpu_dash"] = ring(34);
+    data["ring_net_dash"] = ring(89);
+    // Tile + sub-partial configs. inja's `{% set tile = {...} %}`
+    // can't embed variables in object literals, so each tile
+    // lands here as a pre-built sub-object the template just
+    // dereferences via `{% set tile = tile_throughput %}`.
+    data["tile_throughput"] = {
+        {"value", "12.4 MiB"},     {"label", "ingress / 1m"},
+        {"delta_pct", 3.2},        {"semantic", "good"},
+        {"sparkline_points", spark_a}};
+    data["tile_peers"] = {
+        {"value", "847"},          {"label", "active peers"},
+        {"delta_pct", -1.4},       {"semantic", "info"},
+        {"sparkline_points", spark_b}};
+    data["tile_drops"] = {
+        {"value", "3"},            {"label", "send drops"},
+        {"delta_pct", 0},          {"semantic", "warn"},
+        {"sparkline_points", ""}};
+    data["tile_authfail"] = {
+        {"value", "0"},            {"label", "auth failures"},
+        {"delta_pct", 0},          {"semantic", "good"},
+        {"sparkline_points", ""}};
+    data["tabs_demo"] = {
+        {"active", "overview"},
+        {"entries",
+         {{{"slug", "overview"}, {"label", "overview"}},
+          {{"slug", "config"}, {"label", "config"}},
+          {{"slug", "audit"}, {"label", "audit"}}}}};
+    data["filter_demo"] = {
+        {"target", "#widget-rows tr"},
+        {"placeholder", "filter rows…"},
+        {"counter_id", "widget-row-count"}};
+    data["time_range_demo"] = {
+        {"target", "#widget-noop"},
+        {"url", "/widgets"},
+        {"active", "1h"},
+        {"options",
+         {{{"slug", "1h"}, {"label", "1h"}},
+          {{"slug", "6h"}, {"label", "6h"}},
+          {{"slug", "24h"}, {"label", "24h"}},
+          {{"slug", "7d"}, {"label", "7d"}}}}};
+    for (const auto &name : {"alpha", "bravo", "charlie", "delta",
+                              "echo"}) {
+      data[std::format("copy_{}", name)] = {
+          {"value", std::format("ck_{}", name)},
+          {"label", "copy peer key"}};
+    }
+    einheit::ui::RenderArgs args;
+    args.fragment = "widgets";
+    args.layout = "layout";
+    args.data = std::move(data);
+    args.meta = {{"title", "widgets"}, {"active", "widgets"}};
+    auto r = einheit::ui::Render(engine, req, args);
+    if (!r) {
+      return einheit::ui::RenderError(engine, req, 500,
+                                       "render_failed",
+                                       r.error().message);
+    }
+    return std::move(*r);
+  });
+
+  // /widgets/_toast — POST endpoint the gallery's "throw a toast"
+  // buttons hit; publishes a toast over the event stream so we
+  // can prove the server-driven path end to end.
+  CROW_ROUTE(crow_app, "/widgets/_toast")
+      .methods("POST"_method)([&events](const crow::request &req) {
+        const auto *sev = req.url_params.get("severity");
+        const auto *txt = req.url_params.get("text");
+        events.PublishToast(sev ? sev : "info",
+                            txt ? txt
+                                : "the operator pressed the button");
+        return crow::response(204);
+      });
 
   // Stamp the framework's layout fallbacks once. Routes that
   // forget meta.nav / meta.brand fall back to these so the
