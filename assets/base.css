@@ -629,11 +629,11 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
   border: 1px solid var(--einheit-border);
   border-radius: 6px;
   margin: 0;
-  padding: 8px 0;
+  padding: 6px 0;
   overflow: auto;
   font-family: var(--einheit-font-mono);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.25;
 }
 .diff-line {
   display: flex;
@@ -641,6 +641,7 @@ html[data-sidebar-pinned="true"] .sidebar .sidebar-pick[data-open="true"] > .sid
   gap: 6px;
   padding: 0 12px;
   white-space: pre;
+  line-height: 1.25;
 }
 .diff-a, .diff-b {
   flex: none;
