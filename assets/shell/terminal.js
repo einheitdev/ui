@@ -60,7 +60,8 @@
   const term = new window.Terminal({
     cursorBlink: true,
     fontFamily:
-        'ui-monospace, "Cascadia Mono", "Source Code Pro", monospace',
+        '"Fira Code", ui-monospace, "Cascadia Mono", '
+        + '"Source Code Pro", Menlo, monospace',
     fontSize: 13,
     scrollback: 5000,
     allowProposedApi: true,

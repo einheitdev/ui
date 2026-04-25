@@ -17,5 +17,45 @@ Vendored client assets live here. Fetch on first build:
   curl -L https://unpkg.com/@xterm/addon-fit@0.10.0/lib/addon-fit.js \
     -o xterm/xterm-addon-fit.js
 
+  # Fira Sans (UI) + Fira Code (mono / terminal). Self-hosted so
+  # the framework works on air-gapped / firewalled deploys.
+  curl -L -o fonts/fira-sans-400.woff2 \
+    https://cdn.jsdelivr.net/npm/@fontsource/fira-sans@5.0.20/files/fira-sans-latin-400-normal.woff2
+  curl -L -o fonts/fira-sans-500.woff2 \
+    https://cdn.jsdelivr.net/npm/@fontsource/fira-sans@5.0.20/files/fira-sans-latin-500-normal.woff2
+  curl -L -o fonts/fira-sans-700.woff2 \
+    https://cdn.jsdelivr.net/npm/@fontsource/fira-sans@5.0.20/files/fira-sans-latin-700-normal.woff2
+  curl -L -o fonts/fira-code-400.woff2 \
+    https://cdn.jsdelivr.net/npm/@fontsource/fira-code@5.0.13/files/fira-code-latin-400-normal.woff2
+  curl -L -o fonts/fira-code-700.woff2 \
+    https://cdn.jsdelivr.net/npm/@fontsource/fira-code@5.0.13/files/fira-code-latin-700-normal.woff2
+
+  # Lucide icons. We vendor a curated set (45 icons today —
+  # see icons/ for the list) and bundle them into one symbol
+  # sprite at icons.svg. To add a new icon:
+  #
+  #   curl -L -o icons/<name>.svg \
+  #     https://cdn.jsdelivr.net/npm/lucide-static@0.473.0/icons/<name>.svg
+  #
+  # Then regenerate the sprite (called once per asset refresh):
+  #
+  #   python3 - <<'PY'
+  #   import os, re, glob
+  #   parts = ['<svg xmlns="http://www.w3.org/2000/svg" '
+  #            'aria-hidden="true" style="position:absolute; '
+  #            'width:0; height:0; overflow:hidden">\n<defs>']
+  #   for p in sorted(glob.glob("icons/*.svg")):
+  #       name = os.path.splitext(os.path.basename(p))[0]
+  #       src = re.sub(r"^<!--.*?-->\s*", "", open(p).read(), flags=re.S)
+  #       body = re.match(r"<svg[^>]*>(.*)</svg>\s*$", src, re.S).group(1).strip()
+  #       parts.append(
+  #           f'<symbol id="{name}" viewBox="0 0 24 24" fill="none" '
+  #           f'stroke="currentColor" stroke-width="2" '
+  #           f'stroke-linecap="round" stroke-linejoin="round">'
+  #           f'{body}</symbol>')
+  #   parts.append('</defs>\n</svg>\n')
+  #   open("icons.svg","w").write("\n".join(parts))
+  #   PY
+
 Pin the versions in this file. CMake's install rule picks up
-*.js / *.css in this directory.
+*.js / *.css / *.svg / *.woff2 in this directory.

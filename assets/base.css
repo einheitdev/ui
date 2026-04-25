@@ -1,12 +1,73 @@
+/* ---------------------------------------------------------------
+   Vendored fonts. Source: @fontsource/fira-sans 5.0.20 +
+   @fontsource/fira-code 5.0.13. See assets/README.note for the
+   curl commands. font-display: swap shows the fallback glyphs
+   immediately and lets the woff2 swap in once parsed — no FOIT
+   on first paint.
+   --------------------------------------------------------------- */
+@font-face {
+  font-family: "Fira Sans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/fira-sans-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/assets/fonts/fira-sans-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Sans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/fira-sans-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/fira-code-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/fira-code-700.woff2") format("woff2");
+}
+
+:root {
+  --einheit-font-sans:
+      "Fira Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, sans-serif;
+  --einheit-font-mono:
+      "Fira Code", ui-monospace, "Cascadia Mono", "Source Code Pro",
+      Menlo, Consolas, monospace;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro",
-               Menlo, Consolas, monospace;
+  font-family: var(--einheit-font-sans);
   background: var(--einheit-bg);
   color: var(--einheit-fg);
   font-size: 14px;
   line-height: 1.5;
+}
+
+/* Anywhere we rendered a fixed-width column (tables, log lines,
+   numeric chips, code blocks) we want Fira Code's tabular figures.
+   Cards and chrome stay sans. */
+.data-table td,
+.status-grid .status-value,
+.log-list,
+code, pre, kbd, samp {
+  font-family: var(--einheit-font-mono);
 }
 
 .topnav {
@@ -184,3 +245,17 @@ body {
   padding: 20px;
   text-align: center;
 }
+
+/* Lucide-derived sprite icons. Theme via currentColor — every
+   color: <var> on the wrapping element tints the icon. The
+   stroke-only origin means stroke-width and -linejoin are baked
+   into the sprite's <symbol> definitions. */
+.icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+}
+.icon-lg { width: 20px; height: 20px; }
+.icon-xl { width: 28px; height: 28px; }

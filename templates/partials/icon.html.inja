@@ -1,0 +1,32 @@
+{# Icon partial. Renders one Lucide icon from the vendored sprite
+   at /assets/icons.svg.
+
+   Required:
+     name   — icon id, e.g. "terminal", "shield", "git-branch"
+
+   Optional (caller may omit; default() handles missing keys):
+     size   — pixel size (default 16). Square; sets width + height.
+     extra  — extra class names appended to "icon".
+     title  — accessible label. When non-empty, the icon gets
+              role="img" + an inline <title>; otherwise it is
+              marked aria-hidden so screen readers skip it.
+
+   Color is inherited via currentColor — wrap the icon in a span
+   with `color: var(--einheit-bad)` etc. to tint it. #}
+{% if title | default("") %}
+<svg class="icon {{ extra | default("") }}"
+     width="{{ size | default(16) }}"
+     height="{{ size | default(16) }}"
+     role="img"
+     aria-label="{{ title }}">
+  <title>{{ title }}</title>
+  <use href="/assets/icons.svg#{{ name }}"/>
+</svg>
+{% else %}
+<svg class="icon {{ extra | default("") }}"
+     width="{{ size | default(16) }}"
+     height="{{ size | default(16) }}"
+     aria-hidden="true">
+  <use href="/assets/icons.svg#{{ name }}"/>
+</svg>
+{% endif %}
