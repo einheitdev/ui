@@ -106,6 +106,13 @@ auto RenderError(const render::TemplateEngine &eng,
 /// @param req Incoming request.
 auto IsHxRequest(const crow::request &req) -> bool;
 
+/// True iff the request carries `HX-Boosted: true`. Boosted
+/// requests are full-page navigations that HTMX is intercepting
+/// to swap the body in-place — they want a complete Page render,
+/// not a Fragment, even though HX-Request is also set.
+/// @param req Incoming request.
+auto IsHxBoosted(const crow::request &req) -> bool;
+
 /// Set the path the layout's sidebar foot links to as "Shell".
 /// Empty string hides the entry. The value is process-global; the
 /// UI binary calls this once at startup when `--shell` is enabled

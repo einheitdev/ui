@@ -77,6 +77,10 @@ auto IsHxRequest(const crow::request &req) -> bool {
   return Lower(req.get_header_value("HX-Request")) == "true";
 }
 
+auto IsHxBoosted(const crow::request &req) -> bool {
+  return Lower(req.get_header_value("HX-Boosted")) == "true";
+}
+
 auto SetLayoutShellPath(std::string path) -> void {
   std::lock_guard<std::mutex> lk(ShellMu());
   ShellPath() = std::move(path);
@@ -112,7 +116,13 @@ auto DetectFormat(const crow::request &req) -> ResponseFormat {
   if (explicit_fmt == "json") return ResponseFormat::Json;
   if (explicit_fmt == "html") return ResponseFormat::Page;
   if (explicit_fmt == "fragment") return ResponseFormat::Fragment;
-  if (IsHxRequest(req)) return ResponseFormat::Fragment;
+  // hx-boost'd full-page navigations send HX-Request AND
+  // HX-Boosted. They want the full Page (HTMX swaps the body
+  // in-place); the Fragment branch below handles HX-Request
+  // without HX-Boosted, which is the action-from-button case.
+  if (IsHxRequest(req) && !IsHxBoosted(req)) {
+    return ResponseFormat::Fragment;
+  }
   const auto accept = Lower(req.get_header_value("Accept"));
   if (accept.find("application/json") != std::string::npos) {
     return ResponseFormat::Json;

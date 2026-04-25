@@ -3,17 +3,32 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# Tells the UA to use dark scrollbars / form controls during the
+     navigation moment before our CSS lands. Eliminates the white
+     flash on full-page transitions. Light-theme users still see a
+     brief dark background; reading the einheit_theme cookie here
+     would fix that and is a follow-up. #}
+  <meta name="color-scheme" content="dark light">
+  <style>
+    html { background: #101010; color: #f6fafa; }
+  </style>
   <title>{{ meta.title | default("einheit") }}</title>
   <link rel="stylesheet" href="/assets/base.css">
   <link rel="stylesheet" href="/theme.css">
+  {# htmx + ws-ext stay in <head> with defer — htmx itself
+     mustn't re-init on every boosted swap. sidebar.js moves to
+     the body bottom so it re-runs after each swap (the head's
+     scripts aren't re-evaluated by hx-boost; only swapped body
+     scripts are). #}
   <script src="/assets/htmx.min.js" defer></script>
   <script src="/assets/htmx-ext-ws.js" defer></script>
-  <script src="/assets/sidebar.js" defer></script>
 </head>
-<body class="app-shell" hx-ext="ws" ws-connect="/events">
+<body class="app-shell" hx-ext="ws" ws-connect="/events"
+      hx-boost="true">
   {% include "partials/sidebar" %}
   <main class="app-main">
     <!--EINHEIT_BODY-->
   </main>
+  <script src="/assets/sidebar.js"></script>
 </body>
 </html>
