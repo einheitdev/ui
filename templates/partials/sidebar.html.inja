@@ -54,6 +54,110 @@
   </nav>
 
   <div class="sidebar-foot">
+    <div class="sidebar-group" data-open="false">
+      <button type="button" class="sidebar-item sidebar-group-head"
+              title="Settings">
+        <svg class="icon" width="20" height="20" aria-hidden="true">
+          <use href="/assets/icons.svg#settings"/>
+        </svg>
+        <span class="sidebar-label">Settings</span>
+        <svg class="icon sidebar-group-caret" width="14" height="14"
+             aria-hidden="true">
+          <use href="/assets/icons.svg#chevron-right"/>
+        </svg>
+      </button>
+      <div class="sidebar-group-body">
+        {# Theme picker #}
+        <div class="sidebar-pick" data-open="false"
+             data-pick="theme">
+          <button type="button" class="sidebar-item sidebar-pick-head">
+            <svg class="icon" width="20" height="20" aria-hidden="true">
+              <use href="/assets/icons.svg#eye"/>
+            </svg>
+            <span class="sidebar-label">
+              Theme: <span data-current="theme">psychotropic</span>
+            </span>
+            <svg class="icon sidebar-pick-caret" width="14" height="14"
+                 aria-hidden="true">
+              <use href="/assets/icons.svg#chevron-right"/>
+            </svg>
+          </button>
+          <div class="sidebar-pick-body">
+            <button class="sidebar-option" data-set="theme"
+                    data-value="psychotropic">psychotropic</button>
+            <button class="sidebar-option" data-set="theme"
+                    data-value="light">light</button>
+            <button class="sidebar-option" data-set="theme"
+                    data-value="ocean">ocean</button>
+            <button class="sidebar-option" data-set="theme"
+                    data-value="forest">forest</button>
+            <button class="sidebar-option" data-set="theme"
+                    data-value="solarized-dark">solarized-dark</button>
+            <button class="sidebar-option" data-set="theme"
+                    data-value="high-contrast">high-contrast</button>
+          </div>
+        </div>
+        {# Size picker #}
+        <div class="sidebar-pick" data-open="false" data-pick="scale">
+          <button type="button" class="sidebar-item sidebar-pick-head">
+            <svg class="icon" width="20" height="20" aria-hidden="true">
+              <use href="/assets/icons.svg#square-pen"/>
+            </svg>
+            <span class="sidebar-label">
+              Size: <span data-current="scale">medium</span>
+            </span>
+            <svg class="icon sidebar-pick-caret" width="14" height="14"
+                 aria-hidden="true">
+              <use href="/assets/icons.svg#chevron-right"/>
+            </svg>
+          </button>
+          <div class="sidebar-pick-body">
+            <button class="sidebar-option" data-set="scale"
+                    data-value="0.875">small</button>
+            <button class="sidebar-option" data-set="scale"
+                    data-value="1">medium</button>
+            <button class="sidebar-option" data-set="scale"
+                    data-value="1.125">large</button>
+          </div>
+        </div>
+        {# Language picker — UI scaffold only; actual translations
+           are a follow-up (no i18n in the framework yet). #}
+        <div class="sidebar-pick" data-open="false" data-pick="lang">
+          <button type="button" class="sidebar-item sidebar-pick-head">
+            <svg class="icon" width="20" height="20" aria-hidden="true">
+              <use href="/assets/icons.svg#info"/>
+            </svg>
+            <span class="sidebar-label">
+              Language: <span data-current="lang">EN</span>
+            </span>
+            <svg class="icon sidebar-pick-caret" width="14" height="14"
+                 aria-hidden="true">
+              <use href="/assets/icons.svg#chevron-right"/>
+            </svg>
+          </button>
+          <div class="sidebar-pick-body">
+            <button class="sidebar-option" data-set="lang"
+                    data-value="en">English</button>
+            <button class="sidebar-option" data-set="lang"
+                    data-value="de">Deutsch</button>
+            <button class="sidebar-option" data-set="lang"
+                    data-value="fr">Français</button>
+            <button class="sidebar-option" data-set="lang"
+                    data-value="es">Español</button>
+            <button class="sidebar-option" data-set="lang"
+                    data-value="ja">日本語</button>
+            <button class="sidebar-option" data-set="lang"
+                    data-value="zh">中文</button>
+          </div>
+        </div>
+        <a href="/settings" class="sidebar-item">
+          <svg class="icon" width="20" height="20" aria-hidden="true">
+            <use href="/assets/icons.svg#settings"/>
+          </svg>
+          <span class="sidebar-label">Advanced settings</span>
+        </a>
+      </div>
+    </div>
 {% if meta.shell %}
     <a href="{{ meta.shell }}"
        class="sidebar-item{% if meta.active == "shell" %} active{% endif %}"

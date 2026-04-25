@@ -48,6 +48,12 @@
   --einheit-font-mono:
       "Fira Code", ui-monospace, "Cascadia Mono", "Source Code Pro",
       Menlo, Consolas, monospace;
+  /* UI scale. JS sets this on <html> from the cookie; sizes
+     authored in rem track it. Explicit-px sizes (paddings) stay
+     fixed — converting the framework end-to-end to rem is a
+     follow-up. */
+  --einheit-scale: 1;
+  font-size: calc(16px * var(--einheit-scale));
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -215,11 +221,80 @@ body:has(.sidebar[data-pinned="true"]) .app-main {
   max-width: 0;
   transition: opacity 150ms ease 50ms, max-width 200ms ease;
   overflow: hidden;
+  flex: 1;
 }
 .sidebar:hover .sidebar-label,
 .sidebar[data-pinned="true"] .sidebar-label {
   opacity: 1;
   max-width: 14rem;
+}
+
+/* Settings group + value pickers. The group head is itself a
+   sidebar-item so the icon column stays aligned with the rest of
+   the rail; the body is hidden when the rail is collapsed (no
+   point showing nested controls when the labels are hidden) and
+   when the group itself isn't open. Only the chevron flips on
+   open. */
+.sidebar-group-head,
+.sidebar-pick-head {
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
+}
+.sidebar-group-caret,
+.sidebar-pick-caret {
+  margin-left: auto;
+  flex: none;
+  opacity: 0;
+  transition: opacity 150ms ease 50ms, transform 150ms ease;
+}
+.sidebar:hover .sidebar-group-caret,
+.sidebar:hover .sidebar-pick-caret,
+.sidebar[data-pinned="true"] .sidebar-group-caret,
+.sidebar[data-pinned="true"] .sidebar-pick-caret { opacity: 1; }
+.sidebar-group[data-open="true"] > .sidebar-group-head .sidebar-group-caret,
+.sidebar-pick[data-open="true"] > .sidebar-pick-head .sidebar-pick-caret {
+  transform: rotate(90deg);
+}
+
+.sidebar-group-body,
+.sidebar-pick-body {
+  display: none;
+  padding-left: 12px;
+  border-left: 1px solid var(--einheit-border);
+  margin-left: 26px;
+}
+/* Submenus only ever expand when the rail is wide enough to show
+   labels — collapsed rail keeps them hidden regardless of state. */
+.sidebar:hover .sidebar-group[data-open="true"] > .sidebar-group-body,
+.sidebar[data-pinned="true"] .sidebar-group[data-open="true"] > .sidebar-group-body,
+.sidebar:hover .sidebar-pick[data-open="true"] > .sidebar-pick-body,
+.sidebar[data-pinned="true"] .sidebar-pick[data-open="true"] > .sidebar-pick-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.sidebar-option {
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--einheit-fg2);
+  font-family: var(--einheit-font-sans);
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border-radius: 4px;
+  transition: background 100ms ease, color 100ms ease;
+  white-space: nowrap;
+}
+.sidebar-option:hover { background: var(--einheit-bg2); color: var(--einheit-fg); }
+.sidebar-option[aria-current="true"] {
+  color: var(--einheit-accent);
+  font-weight: 600;
 }
 
 .card {

@@ -1,29 +1,29 @@
-// sidebar.js — pin/unpin behaviour for the left rail. Persists
-// the pinned state to localStorage so subsequent page loads
-// restore it. Hover-to-expand is CSS-only (`.sidebar:hover`),
-// pin-to-stay-open is `[data-pinned="true"]` driven from here.
+// sidebar.js — pin/unpin behaviour for the left rail and the
+// settings group's expand-and-pick UX. Persists three preferences
+// (theme, scale, lang) to cookies + localStorage so server-side
+// rendering can read the cookie and the next page load applies
+// the choice without flashing the default.
 (function () {
   'use strict';
-  const KEY = 'einheit:sidebar:pinned';
+
+  const PIN_KEY = 'einheit:sidebar:pinned';
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
   const pinBtn = sidebar.querySelector('.sidebar-pin');
 
+  // ----------------------------------------------------------
+  // Pin / unpin (existing behaviour).
+  // ----------------------------------------------------------
+
   function setPinned(pinned) {
     sidebar.dataset.pinned = pinned ? 'true' : 'false';
     try {
-      localStorage.setItem(KEY, pinned ? '1' : '0');
-    } catch (e) {
-      // localStorage unavailable (e.g. blocked-cookies or
-      // private mode); the pin still works for the session.
-    }
+      localStorage.setItem(PIN_KEY, pinned ? '1' : '0');
+    } catch (e) { /* private mode */ }
   }
 
-  // Restore from previous session.
   let initial = false;
-  try {
-    initial = localStorage.getItem(KEY) === '1';
-  } catch (e) {}
+  try { initial = localStorage.getItem(PIN_KEY) === '1'; } catch (e) {}
   setPinned(initial);
 
   if (pinBtn) {
@@ -34,9 +34,6 @@
     });
   }
 
-  // Click anywhere on the rail that isn't an interactive
-  // element (link, button, input, label) toggles pinned. Mirrors
-  // the OTC.Relay UX where the whole rail acts as a pin target.
   sidebar.addEventListener('click', function (ev) {
     if (ev.target.closest(
             'a, button, input, textarea, select, label')) {
@@ -44,4 +41,136 @@
     }
     setPinned(sidebar.dataset.pinned !== 'true');
   });
+
+  // ----------------------------------------------------------
+  // Settings group + value pickers.
+  // ----------------------------------------------------------
+
+  function toggleAttr(el) {
+    el.dataset.open = el.dataset.open === 'true' ? 'false' : 'true';
+  }
+
+  // Top-level "Settings" group toggle.
+  const group = sidebar.querySelector('.sidebar-group');
+  if (group) {
+    const head = group.querySelector('.sidebar-group-head');
+    head.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      toggleAttr(group);
+    });
+  }
+
+  // Each value picker (theme/scale/lang) opens its own submenu.
+  // Closing one when another opens isn't enforced — Relay lets
+  // multiple stay open and we follow the same pattern.
+  sidebar.querySelectorAll('.sidebar-pick').forEach(function (pick) {
+    const head = pick.querySelector('.sidebar-pick-head');
+    if (!head) return;
+    head.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      toggleAttr(pick);
+    });
+  });
+
+  // ----------------------------------------------------------
+  // Persisting + applying preferences.
+  // ----------------------------------------------------------
+
+  function setCookie(name, value, days) {
+    const max = days * 24 * 60 * 60;
+    document.cookie = name + '=' + encodeURIComponent(value) +
+        '; path=/; max-age=' + max + '; SameSite=Lax';
+  }
+
+  function getCookie(name) {
+    const m = document.cookie.match(
+        new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  // Scale: stored as a numeric string (0.875 / 1 / 1.125), applied
+  // by setting --einheit-scale on <html>.
+  const SCALE_LABELS = {
+    '0.875': 'small',
+    '1': 'medium',
+    '1.125': 'large',
+  };
+  function applyScale(value) {
+    document.documentElement.style.setProperty(
+        '--einheit-scale', value);
+    const label = SCALE_LABELS[value] || 'medium';
+    sidebar.querySelectorAll('[data-current="scale"]').forEach(
+        function (el) { el.textContent = label; });
+    sidebar.querySelectorAll('[data-set="scale"]').forEach(
+        function (el) {
+          el.setAttribute('aria-current',
+              el.dataset.value === value ? 'true' : 'false');
+        });
+  }
+
+  // Theme: stored as the name (e.g. "ocean"). Applied by swapping
+  // the /theme.css link's href so the server returns the new
+  // palette. Server-side, the route reads the einheit_theme
+  // cookie to pick the palette.
+  function applyTheme(name) {
+    const link = document.querySelector(
+        'link[rel="stylesheet"][href^="/theme.css"]');
+    if (link) {
+      link.href = '/theme.css?_=' + Date.now();
+    }
+    sidebar.querySelectorAll('[data-current="theme"]').forEach(
+        function (el) { el.textContent = name; });
+    sidebar.querySelectorAll('[data-set="theme"]').forEach(
+        function (el) {
+          el.setAttribute('aria-current',
+              el.dataset.value === name ? 'true' : 'false');
+        });
+  }
+
+  // Language: stored as a 2-letter code. The framework has no
+  // translation pipeline yet, so this only persists the choice —
+  // adapter strings stay in their authored language until i18n
+  // lands. The picker UI is wired so the plumbing is ready when
+  // it does.
+  function applyLang(code) {
+    sidebar.querySelectorAll('[data-current="lang"]').forEach(
+        function (el) {
+          el.textContent = (code || 'en').toUpperCase();
+        });
+    sidebar.querySelectorAll('[data-set="lang"]').forEach(
+        function (el) {
+          el.setAttribute('aria-current',
+              el.dataset.value === code ? 'true' : 'false');
+        });
+    document.documentElement.setAttribute('lang', code || 'en');
+  }
+
+  // Wire option clicks. The data-set / data-value pair on each
+  // .sidebar-option button identifies which preference + value to
+  // apply.
+  sidebar.querySelectorAll('.sidebar-option').forEach(function (opt) {
+    opt.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      const key = opt.dataset.set;
+      const value = opt.dataset.value;
+      if (!key || value === undefined) return;
+      if (key === 'theme') {
+        setCookie('einheit_theme', value, 365);
+        applyTheme(value);
+      } else if (key === 'scale') {
+        setCookie('einheit_scale', value, 365);
+        applyScale(value);
+      } else if (key === 'lang') {
+        setCookie('einheit_lang', value, 365);
+        applyLang(value);
+      }
+    });
+  });
+
+  // Restore from cookie on every page load — the server may also
+  // honour the cookie (theme.css does), this keeps client-side
+  // state (label text, aria-current, --einheit-scale) coherent.
+  applyTheme(getCookie('einheit_theme') || 'psychotropic');
+  applyScale(getCookie('einheit_scale') || '1');
+  applyLang(getCookie('einheit_lang') || 'en');
 })();

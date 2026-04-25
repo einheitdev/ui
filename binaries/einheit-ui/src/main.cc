@@ -4,6 +4,7 @@
 /// the selected adapter, and runs Crow.
 // Copyright (c) 2026 Einheit Networks
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -200,10 +201,47 @@ auto main(int argc, char **argv) -> int {
   einheit::ui::EventStream events(engine);
   events.Mount(crow_app);
 
-  // Theme route — renders theme.css.inja with the selected palette.
-  const auto theme = einheit::ui::NamedTheme(theme_name);
+  // Theme route — renders theme.css.inja with the palette the
+  // request asks for. Precedence: ?name= query > einheit_theme
+  // cookie > --theme flag default. Cache-Control is set to no-
+  // store so a swap from sidebar.js takes effect on the next
+  // request without intermediaries serving the previous palette.
+  const auto default_theme = einheit::ui::NamedTheme(theme_name);
   CROW_ROUTE(crow_app, "/theme.css")
-  ([&engine, theme](const crow::request &) {
+  ([&engine, default_theme](const crow::request &req) {
+    auto pick_name = [&]() -> std::string {
+      if (const auto *q = req.url_params.get("name"); q && *q) {
+        return q;
+      }
+      const auto &cookie = req.get_header_value("Cookie");
+      if (!cookie.empty()) {
+        const std::string key = "einheit_theme=";
+        auto pos = cookie.find(key);
+        if (pos != std::string::npos) {
+          auto start = pos + key.size();
+          auto end = cookie.find(';', start);
+          return cookie.substr(start,
+                                end == std::string::npos
+                                    ? std::string::npos
+                                    : end - start);
+        }
+      }
+      return {};
+    };
+    auto theme = default_theme;
+    const auto requested = pick_name();
+    if (!requested.empty()) {
+      // NamedTheme falls back to DefaultDark on unknown names, so
+      // we only override when the request actually matches a
+      // known theme — otherwise an attacker-controlled cookie
+      // could force the dark default and silently revert the
+      // operator's choice.
+      const auto known = einheit::ui::NamedThemeList();
+      if (std::find(known.begin(), known.end(), requested) !=
+          known.end()) {
+        theme = einheit::ui::NamedTheme(requested);
+      }
+    }
     auto body = engine.Render("theme.css", einheit::ui::ToJson(theme));
     if (!body) {
       crow::response r{500, body.error().message};
@@ -212,9 +250,29 @@ auto main(int argc, char **argv) -> int {
     }
     crow::response r{200, *body};
     r.set_header("Content-Type", "text/css; charset=utf-8");
-    r.set_header("Cache-Control",
-                 "public, max-age=300, must-revalidate");
+    r.set_header("Cache-Control", "no-store");
     return r;
+  });
+
+  // Advanced settings page. Today the operator UI exposes its
+  // preferences inline in the sidebar; /settings is the place
+  // for things that don't belong in the rail (auth, network,
+  // diagnostics dumps). Renders a placeholder so the link from
+  // the rail isn't a 404.
+  CROW_ROUTE(crow_app, "/settings")
+  ([&engine](const crow::request &req) {
+    einheit::ui::RenderArgs args;
+    args.fragment = "settings";
+    args.layout = "layout";
+    args.data = nlohmann::json::object();
+    args.meta = {{"title", "settings"}, {"active", "settings"}};
+    auto r = einheit::ui::Render(engine, req, args);
+    if (!r) {
+      return einheit::ui::RenderError(engine, req, 500,
+                                       "render_failed",
+                                       r.error().message);
+    }
+    return std::move(*r);
   });
 
   // Stamp the framework's layout fallbacks once. Routes that

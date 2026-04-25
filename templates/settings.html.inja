@@ -1,0 +1,20 @@
+{# Advanced settings placeholder. The sidebar's settings group
+   covers theme + size + language inline; this page is the home
+   for things that don't fit the rail — auth, network defaults,
+   diagnostics, daemon endpoints. As of now it's a stub so the
+   "Advanced settings" link from the rail isn't a 404. #}
+<section class="card">
+  <h2 class="card-title">advanced settings</h2>
+  <div class="card-body">
+    <p style="margin: 0 0 12px 0; color: var(--einheit-fg2);">
+      Inline settings (theme, size, language) live in the
+      sidebar's settings group. Configuration that belongs here
+      will land as the framework grows: auth, network defaults,
+      daemon endpoints, diagnostics dumps.
+    </p>
+    <p style="margin: 0; color: var(--einheit-fg3); font-size: 12px;">
+      For full configuration today, use
+      <code>einheit configure</code> from the shell.
+    </p>
+  </div>
+</section>
