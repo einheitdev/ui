@@ -33,6 +33,25 @@ std::string &ShellPath() {
   return p;
 }
 
+// Process-global fallbacks for meta.nav and meta.brand. Each
+// adapter route used to spell these out by hand; with the
+// sidebar layout there is exactly one canonical value for both
+// per process, so the UI binary sets them once at startup and
+// Render() backfills any route that forgot. Same mutex/value
+// pattern as ShellPath above.
+std::mutex &PrimaryMu() {
+  static std::mutex m;
+  return m;
+}
+nlohmann::json &PrimaryNav() {
+  static nlohmann::json n = nlohmann::json::array();
+  return n;
+}
+std::string &PrimaryBrand() {
+  static std::string b;
+  return b;
+}
+
 auto Lower(std::string s) -> std::string {
   for (auto &ch : s) ch = static_cast<char>(std::tolower(ch));
   return s;
@@ -58,6 +77,16 @@ auto SetLayoutShellPath(std::string path) -> void {
 auto LayoutShellPath() -> std::string {
   std::lock_guard<std::mutex> lk(ShellMu());
   return ShellPath();
+}
+
+auto SetLayoutPrimaryNav(nlohmann::json nav) -> void {
+  std::lock_guard<std::mutex> lk(PrimaryMu());
+  PrimaryNav() = std::move(nav);
+}
+
+auto SetLayoutPrimaryBrand(std::string brand) -> void {
+  std::lock_guard<std::mutex> lk(PrimaryMu());
+  PrimaryBrand() = std::move(brand);
 }
 
 auto DetectFormat(const crow::request &req) -> ResponseFormat {
@@ -108,10 +137,19 @@ auto Render(const render::TemplateEngine &eng, ResponseFormat fmt,
                                 ? args.meta
                                 : nlohmann::json::object();
       if (!meta.contains("title")) meta["title"] = "einheit";
-      if (!meta.contains("brand")) meta["brand"] = "einheit";
+      if (!meta.contains("brand")) {
+        std::string brand;
+        {
+          std::lock_guard<std::mutex> lk(PrimaryMu());
+          brand = PrimaryBrand();
+        }
+        meta["brand"] = brand.empty() ? std::string("einheit") : brand;
+      }
       if (!meta.contains("active")) meta["active"] = "";
-      if (!meta.contains("nav"))
-        meta["nav"] = nlohmann::json::array();
+      if (!meta.contains("nav")) {
+        std::lock_guard<std::mutex> lk(PrimaryMu());
+        meta["nav"] = PrimaryNav();
+      }
       // Inject the framework's optional /shell entry. Adapters
       // never need to know about the shell module — the UI binary
       // sets the path once on startup, and every Page render

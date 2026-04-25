@@ -117,6 +117,19 @@ auto SetLayoutShellPath(std::string path) -> void;
 /// Read the current shell-path setting. Used by Render().
 auto LayoutShellPath() -> std::string;
 
+/// Set the JSON the layout uses for `meta.nav` when an individual
+/// route's RenderArgs didn't supply one. Lets each route handler
+/// skip the boilerplate of building nav from `adapter->Nav()` —
+/// the UI binary stamps the primary adapter's nav once at
+/// startup and every page-format render backfills from it.
+/// @param nav Pre-built JSON array (typically `NavToJson(...)`).
+auto SetLayoutPrimaryNav(nlohmann::json nav) -> void;
+
+/// Set the brand label the layout uses when a route handler
+/// doesn't supply `meta.brand`. Same call-once-at-startup
+/// pattern as SetLayoutPrimaryNav.
+auto SetLayoutPrimaryBrand(std::string brand) -> void;
+
 }  // namespace einheit::ui
 
 #endif  // INCLUDE_EINHEIT_UI_ROUTE_H_

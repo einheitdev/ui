@@ -217,6 +217,14 @@ auto main(int argc, char **argv) -> int {
     return r;
   });
 
+  // Stamp the framework's layout fallbacks once. Routes that
+  // forget meta.nav / meta.brand fall back to these so the
+  // sidebar always has the right entries — adapters only need
+  // to set meta when they want to override.
+  einheit::ui::SetLayoutPrimaryNav(
+      einheit::ui::NavToJson(adapter->Nav()));
+  einheit::ui::SetLayoutPrimaryBrand(adapter->DisplayName());
+
   einheit::ui::AdapterContext ctx{
       .app = &crow_app, .templates = &engine, .events = &events};
   adapter->Mount(ctx);
