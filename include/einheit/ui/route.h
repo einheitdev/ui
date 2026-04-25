@@ -106,6 +106,17 @@ auto RenderError(const render::TemplateEngine &eng,
 /// @param req Incoming request.
 auto IsHxRequest(const crow::request &req) -> bool;
 
+/// Set the path the layout's sidebar foot links to as "Shell".
+/// Empty string hides the entry. The value is process-global; the
+/// UI binary calls this once at startup when `--shell` is enabled
+/// so /shell shows up in the sidebar of every product page
+/// without each adapter having to know about the shell module.
+/// @param path URL path; pass "" to hide.
+auto SetLayoutShellPath(std::string path) -> void;
+
+/// Read the current shell-path setting. Used by Render().
+auto LayoutShellPath() -> std::string;
+
 }  // namespace einheit::ui
 
 #endif  // INCLUDE_EINHEIT_UI_ROUTE_H_

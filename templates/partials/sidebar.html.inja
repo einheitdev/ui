@@ -1,0 +1,68 @@
+{# Left-rail sidebar. Two states:
+
+   1. collapsed (default)  — 4rem wide, icons only.
+   2. expanded             — 17.5rem wide, icons + labels.
+
+   Hover-to-expand is CSS-only (`.sidebar:hover`). Pin-to-stay-
+   open is `.sidebar.pinned` toggled by /assets/sidebar.js, which
+   also persists the choice to localStorage so subsequent page
+   loads remember it.
+
+   Required (passed via meta):
+     meta.brand   — top-of-rail product name (string)
+     meta.active  — slug of the currently-rendered entry
+     meta.nav     — array of {href, label, slug, icon}
+
+   Optional:
+     meta.shell   — "/shell" when the shell adapter is mounted;
+                    when set, an extra "Shell" entry is rendered
+                    pinned at the bottom. (Cross-adapter nav
+                    merging without this hack is a separate
+                    follow-up.) #}
+<aside class="sidebar" data-pinned="false">
+  <div class="sidebar-head">
+    <a class="sidebar-brand" href="/" aria-label="home">
+      <svg class="icon" width="22" height="22" aria-hidden="true">
+        <use href="/assets/icons.svg#zap"/>
+      </svg>
+      <span class="sidebar-label">{{ meta.brand | default("einheit") }}</span>
+    </a>
+    <button type="button"
+            class="sidebar-pin"
+            aria-label="pin sidebar"
+            title="pin">
+      <svg class="icon icon-pin" width="14" height="14" aria-hidden="true">
+        <use href="/assets/icons.svg#chevron-right"/>
+      </svg>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="primary">
+{% if meta.nav %}
+{% for entry in meta.nav %}
+    <a href="{{ entry.href }}"
+       class="sidebar-item{% if entry.slug == meta.active %} active{% endif %}"
+       data-slug="{{ entry.slug }}"
+       title="{{ entry.label }}">
+      <svg class="icon" width="20" height="20" aria-hidden="true">
+        <use href="/assets/icons.svg#{{ entry.icon | default("circle") }}"/>
+      </svg>
+      <span class="sidebar-label">{{ entry.label }}</span>
+    </a>
+{% endfor %}
+{% endif %}
+  </nav>
+
+  <div class="sidebar-foot">
+{% if meta.shell %}
+    <a href="{{ meta.shell }}"
+       class="sidebar-item{% if meta.active == "shell" %} active{% endif %}"
+       title="Shell">
+      <svg class="icon" width="20" height="20" aria-hidden="true">
+        <use href="/assets/icons.svg#terminal"/>
+      </svg>
+      <span class="sidebar-label">Shell</span>
+    </a>
+{% endif %}
+  </div>
+</aside>

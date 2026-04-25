@@ -70,33 +70,136 @@ code, pre, kbd, samp {
   font-family: var(--einheit-font-mono);
 }
 
-.topnav {
-  background: var(--einheit-bg1);
-  padding: 12px 24px;
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  border-bottom: 1px solid var(--einheit-border);
+/* ---------------------------------------------------------------
+   Application shell. Left rail sidebar (collapsed by default,
+   expands on hover OR when pinned), main content fills the rest.
+   The collapsed-width margin on .app-main matches the sidebar's
+   collapsed width so content doesn't shift when the sidebar
+   hover-expands — the expanded sidebar floats over the content
+   instead, matching the OTC.Relay UX.
+   --------------------------------------------------------------- */
+.app-shell {
+  min-height: 100vh;
+  background: var(--einheit-bg);
 }
-.topnav .brand {
-  color: var(--einheit-accent);
-  font-weight: bold;
-  font-size: 18px;
-  text-decoration: none;
-}
-.topnav .navlink {
-  color: var(--einheit-fg3);
-  text-decoration: none;
-  padding: 4px 0;
-  border-bottom: 2px solid transparent;
-}
-.topnav .navlink:hover { color: var(--einheit-fg); }
-.topnav .navlink.active {
-  color: var(--einheit-fg);
-  border-bottom-color: var(--einheit-accent);
+.app-main {
+  margin-left: 4rem;
+  padding: 24px;
+  max-width: 1200px;
 }
 
-.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 4rem;
+  background: var(--einheit-bg1);
+  color: var(--einheit-fg2);
+  border-right: 1px solid var(--einheit-border);
+  display: flex;
+  flex-direction: column;
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  z-index: 100;
+  scrollbar-width: thin;
+}
+.sidebar:hover,
+.sidebar[data-pinned="true"] { width: 17.5rem; }
+
+.sidebar-head {
+  position: relative;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--einheit-border);
+  margin-bottom: 8px;
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: var(--einheit-accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sidebar-brand .icon { flex: none; }
+
+.sidebar-pin {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--einheit-fg3);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+.sidebar:hover .sidebar-pin,
+.sidebar[data-pinned="true"] .sidebar-pin { opacity: 1; }
+.sidebar-pin:hover { color: var(--einheit-fg); background: var(--einheit-bg2); }
+.sidebar[data-pinned="true"] .icon-pin { transform: rotate(90deg); }
+
+.sidebar-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+.sidebar-foot {
+  padding: 8px 0;
+  border-top: 1px solid var(--einheit-border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  color: var(--einheit-fg2);
+  text-decoration: none;
+  white-space: nowrap;
+  border-left: 2px solid transparent;
+  transition: background 120ms ease, color 120ms ease,
+              border-color 120ms ease;
+}
+.sidebar-item .icon { flex: none; min-width: 20px; }
+.sidebar-item:hover {
+  background: var(--einheit-bg2);
+  color: var(--einheit-fg);
+}
+.sidebar-item.active {
+  color: var(--einheit-accent);
+  background: color-mix(in srgb, var(--einheit-accent) 8%, transparent);
+  border-left-color: var(--einheit-accent);
+}
+
+/* Labels animate in via opacity + max-width so they hide cleanly
+   when the rail is collapsed. The transition delay on opacity
+   prevents flashing during the width tween. */
+.sidebar-label {
+  font-family: var(--einheit-font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  opacity: 0;
+  max-width: 0;
+  transition: opacity 150ms ease 50ms, max-width 200ms ease;
+  overflow: hidden;
+}
+.sidebar:hover .sidebar-label,
+.sidebar[data-pinned="true"] .sidebar-label {
+  opacity: 1;
+  max-width: 14rem;
+}
 
 .card {
   background: var(--einheit-bg1);

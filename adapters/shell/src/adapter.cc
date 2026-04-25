@@ -82,9 +82,9 @@ auto Mount(crow::SimpleApp &app,
     };
     args.meta = {
         {"title", "shell"},
-        {"brand", "shell"},
+        {"brand", cfg.primary_brand},
         {"active", "shell"},
-        {"nav", nlohmann::json::array()},
+        {"nav", ui::NavToJson(cfg.primary_nav)},
     };
     auto r = ui::Render(engine, req, args);
     if (!r) {

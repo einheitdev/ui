@@ -15,9 +15,11 @@
 
 #include <expected>
 #include <string>
+#include <vector>
 
 #include <crow.h>
 
+#include "einheit/ui/adapter.h"
 #include "einheit/ui/error.h"
 #include "einheit/ui/render/template_engine.h"
 
@@ -67,6 +69,13 @@ struct ShellConfig {
   /// daemon). Useful for demos and dev when no real product
   /// daemon is listening.
   bool cli_learn = false;
+  /// Primary adapter's nav entries. The /shell page renders the
+  /// same sidebar as the product pages so the operator doesn't
+  /// lose their bearings when they switch into the terminal.
+  /// Pass an empty vector to render a brand-only sidebar.
+  std::vector<ui::NavEntry> primary_nav;
+  /// Display name shown in the sidebar brand on /shell.
+  std::string primary_brand = "einheit";
 };
 
 /// Mount the shell page + WebSocket endpoint on `app`. Routes:

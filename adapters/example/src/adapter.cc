@@ -35,8 +35,8 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
   }
   auto Nav() const -> std::vector<ui::NavEntry> override {
     return {
-        {"/", "Dashboard", "dashboard"},
-        {"/counters", "Counters", "counters"},
+        {"/", "Dashboard", "dashboard", "monitor"},
+        {"/counters", "Counters", "counters", "activity"},
     };
   }
 
@@ -81,12 +81,8 @@ class ExampleUiAdapter final : public ui::ProductUiAdapter {
           {"title", "example — dashboard"},
           {"brand", DisplayName()},
           {"active", "dashboard"},
-          {"nav", nlohmann::json::array()},
+          {"nav", ui::NavToJson(nav)},
       };
-      for (const auto &n : nav) {
-        args.meta["nav"].push_back(
-            {{"href", n.href}, {"label", n.label}, {"slug", n.slug}});
-      }
       auto r = ui::Render(*eng, req, args);
       if (!r) {
         return ui::RenderError(*eng, req, 500, "render_failed",

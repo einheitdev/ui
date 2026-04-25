@@ -234,6 +234,8 @@ auto main(int argc, char **argv) -> int {
     scfg2.cli_endpoint = shell_endpoint;
     scfg2.cli_event_endpoint = shell_event_endpoint;
     scfg2.cli_learn = shell_learn;
+    scfg2.primary_nav = adapter->Nav();
+    scfg2.primary_brand = adapter->DisplayName();
     if (auto r = einheit::adapters::shell::Mount(crow_app, engine,
                                                    scfg2);
         !r) {
@@ -241,6 +243,9 @@ auto main(int argc, char **argv) -> int {
                                r.error().message);
       return 1;
     }
+    // Tell the framework's layout where the shell lives so every
+    // product page renders a "Shell" link in the sidebar foot.
+    einheit::ui::SetLayoutShellPath("/shell");
   }
 
   if (auto r = einheit::ui::Run(crow_app, scfg); !r) {

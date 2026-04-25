@@ -2,6 +2,7 @@
 # This is the headline target adapters and binaries link against.
 
 add_library(ui_core_obj OBJECT
+  src/adapter.cc
   src/route.cc
   src/stream.cc
   src/server.cc

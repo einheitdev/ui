@@ -3,7 +3,9 @@
 
 #include "einheit/ui/route.h"
 
+#include <atomic>
 #include <format>
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -15,6 +17,20 @@ namespace {
 auto MakeError(RouteError code, std::string msg)
     -> Error<RouteError> {
   return Error<RouteError>{code, std::move(msg)};
+}
+
+// Process-global "where does /shell live, if anywhere" string. Set
+// once at startup by the UI binary when --shell is on; read on
+// every Page-format Render to inject meta.shell into the layout.
+// A mutex rather than an atomic<string> because std::string isn't
+// trivially copyable.
+std::mutex &ShellMu() {
+  static std::mutex m;
+  return m;
+}
+std::string &ShellPath() {
+  static std::string p;
+  return p;
 }
 
 auto Lower(std::string s) -> std::string {
@@ -32,6 +48,16 @@ auto QueryParam(const crow::request &req, const std::string &key)
 
 auto IsHxRequest(const crow::request &req) -> bool {
   return Lower(req.get_header_value("HX-Request")) == "true";
+}
+
+auto SetLayoutShellPath(std::string path) -> void {
+  std::lock_guard<std::mutex> lk(ShellMu());
+  ShellPath() = std::move(path);
+}
+
+auto LayoutShellPath() -> std::string {
+  std::lock_guard<std::mutex> lk(ShellMu());
+  return ShellPath();
 }
 
 auto DetectFormat(const crow::request &req) -> ResponseFormat {
@@ -86,6 +112,18 @@ auto Render(const render::TemplateEngine &eng, ResponseFormat fmt,
       if (!meta.contains("active")) meta["active"] = "";
       if (!meta.contains("nav"))
         meta["nav"] = nlohmann::json::array();
+      // Inject the framework's optional /shell entry. Adapters
+      // never need to know about the shell module — the UI binary
+      // sets the path once on startup, and every Page render
+      // automatically gets it.
+      if (!meta.contains("shell")) {
+        std::string path;
+        {
+          std::lock_guard<std::mutex> lk(ShellMu());
+          path = ShellPath();
+        }
+        meta["shell"] = path;
+      }
       nlohmann::json layout_ctx = nlohmann::json::object();
       layout_ctx["meta"] = std::move(meta);
       layout_ctx["data"] = args.data;

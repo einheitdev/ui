@@ -192,10 +192,10 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
   }
   auto Nav() const -> std::vector<ui::NavEntry> override {
     return {
-        {"/", "Overview", "overview"},
-        {"/peers", "Peers", "peers"},
-        {"/counters", "Counters", "counters"},
-        {"/audit", "Audit", "audit"},
+        {"/", "Overview", "overview", "monitor"},
+        {"/peers", "Peers", "peers", "users"},
+        {"/counters", "Counters", "counters", "activity"},
+        {"/audit", "Audit", "audit", "file-text"},
     };
   }
 
@@ -209,12 +209,7 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
       meta = {{"title", std::move(title)},
               {"brand", DisplayName()},
               {"active", std::move(active)},
-              {"nav", nlohmann::json::array()}};
-      for (const auto &n : nav) {
-        meta["nav"].push_back({{"href", n.href},
-                               {"label", n.label},
-                               {"slug", n.slug}});
-      }
+              {"nav", ui::NavToJson(nav)}};
     };
 
     CROW_ROUTE(app, "/")
