@@ -1,0 +1,6 @@
+<section class="card">
+  <h2 class="card-title">pipeline runs</h2>
+  <div class="card-body" id="runs-table">
+    {% include "takt/runs_table" %}
+  </div>
+</section>

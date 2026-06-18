@@ -20,6 +20,7 @@
 #include "einheit/adapters/editor/ui_adapter.h"
 #include "einheit/adapters/example/ui_adapter.h"
 #include "einheit/adapters/hd_relay/ui_adapter.h"
+#include "einheit/adapters/takt/ui_adapter.h"
 #include "einheit/adapters/shell/ui_adapter.h"
 #include "einheit/ui/adapter.h"
 #include "einheit/ui/diff.h"
@@ -88,6 +89,7 @@ auto main(int argc, char **argv) -> int {
   std::string theme_name = "psychotropic";
   std::string hd_url = "http://127.0.0.1:9090";
   std::string hd_token;
+  std::string takt_url = "http://127.0.0.1:7433";
 
   // Editor adapter (CodeMirror 6 page). Off unless --editor.
   bool enable_editor = false;
@@ -113,7 +115,8 @@ auto main(int argc, char **argv) -> int {
   app.add_option("--tls-cert", tls_cert, "TLS certificate path");
   app.add_option("--tls-key", tls_key, "TLS private key path");
   app.add_option("--adapter", adapter_name,
-                 "Product adapter (example | hd-relay)");
+                 "Product adapter "
+                 "(example | hd-relay | takt)");
   app.add_option("--templates", templates_dir,
                  "Override templates root");
   app.add_option("--assets", assets_dir,
@@ -127,6 +130,9 @@ auto main(int argc, char **argv) -> int {
   app.add_option("--hd-token", hd_token,
                  "Bearer token for the hd metrics endpoint "
                  "(optional)");
+  app.add_option("--takt-url", takt_url,
+                 "takt REST API base URL "
+                 "(takt adapter only)");
 
   app.add_flag("--editor", enable_editor,
                "Mount the /edit CodeMirror 6 source editor "
@@ -184,8 +190,14 @@ auto main(int argc, char **argv) -> int {
     hcfg.bearer_token = hd_token;
     adapter = einheit::adapters::hd_relay::NewHdRelayUiAdapter(
         std::move(hcfg));
+  } else if (adapter_name == "takt") {
+    einheit::adapters::takt::TaktClientConfig tcfg2;
+    tcfg2.base_url = takt_url;
+    adapter = einheit::adapters::takt::NewTaktUiAdapter(
+        std::move(tcfg2));
   } else {
-    std::cerr << std::format("unknown adapter '{}'\n", adapter_name);
+    std::cerr << std::format("unknown adapter '{}'\n",
+                             adapter_name);
     return 1;
   }
 

@@ -83,6 +83,26 @@ gtest_discover_tests(test_example_adapter
   PROPERTIES TIMEOUT 30
 )
 
+# takt adapter contract test.
+add_executable(test_takt_adapter test_takt_adapter.cc)
+target_include_directories(test_takt_adapter
+  PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_definitions(test_takt_adapter
+  PRIVATE
+    EINHEIT_UI_FRAMEWORK_TEMPLATES_DIR="${PROJECT_SOURCE_DIR}/templates"
+)
+target_link_libraries(test_takt_adapter
+  PRIVATE
+    einheit_ui
+    einheit_ui_adapter_takt
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(test_takt_adapter
+  DISCOVERY_TIMEOUT 10
+  PROPERTIES TIMEOUT 30
+)
+
 # Shell adapter mount-time validation. The PTY/WS bridge isn't
 # exercised here — that requires real launcher/cli binaries.
 add_executable(test_shell_adapter test_shell_adapter.cc)
