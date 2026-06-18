@@ -272,11 +272,15 @@ TEST(TaktAdapter, StepOutputTemplateRenders) {
   ui::render::TemplateEngine eng(std::move(tcfg));
   nlohmann::json data = {
       {"step",
-       {{"name", "test"},
+       {{"id", 1},
+        {"name", "test"},
         {"status", "completed"},
+        {"status_semantic", "good"},
         {"step_type", "agent"},
-        {"cost_usd", 0.42}}},
+        {"cost_usd", 0.42},
+        {"num_turns", 8}}},
       {"run_id", 1},
+      {"next_line", 1},
       {"entries",
        nlohmann::json::array(
            {{{"timestamp", "2026-06-18T10:00:00"},

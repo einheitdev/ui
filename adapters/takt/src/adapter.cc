@@ -165,6 +165,7 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
         {"/agents", "Agents", "agents", "bot"},
         {"/targets", "Targets", "targets", "server"},
         {"/runs", "Runs", "runs", "play"},
+        {"/meta-agents", "Meta", "meta", "cpu"},
         {"/settings", "Settings", "settings",
          "settings"},
     };
@@ -444,19 +445,77 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
             {"message", line.value("content", "")},
         });
       }
+      auto step_data = *step;
+      step_data["status_semantic"] = StatusSemantic(
+          step_data.value("status", ""));
       ui::RenderArgs args;
       args.fragment = "takt/step_output";
       args.layout = "layout";
       args.data = {
-          {"step", *step},
+          {"step", step_data},
           {"entries", entries},
           {"run_id", run_id},
+          {"next_line",
+           static_cast<int>(output->size())},
       };
       auto r = ui::Render(*eng, req, args);
       if (!r) {
         return ui::RenderError(*eng, req, 500,
                                "render_failed",
                                r.error().message);
+      }
+      return std::move(*r);
+    });
+
+    // -- Step output tail (HTMX poll) --
+    CROW_ROUTE(app, "/runs/<int>/steps/<int>/tail")
+    ([eng, this](const crow::request &req,
+                 int run_id, int step_id) {
+      auto from_str = req.url_params.get("from");
+      int from_line = from_str ? std::atoi(from_str)
+                               : 0;
+      auto output = client_.Get(std::format(
+          "/api/runs/{}/steps/{}/output?from={}",
+          run_id, step_id, from_line));
+      auto step = client_.Get(std::format(
+          "/api/runs/{}/steps/{}", run_id, step_id));
+      if (!output) {
+        return crow::response(502,
+            output.error().message);
+      }
+      nlohmann::json entries =
+          nlohmann::json::array();
+      for (const auto &line : *output) {
+        std::string level = "INFO";
+        auto kind = line.value("kind", "text");
+        if (kind == "error") level = "ERROR";
+        else if (kind == "tool_use") level = "DEBUG";
+        else if (kind == "thinking") level = "DEBUG";
+        entries.push_back({
+            {"timestamp", line.value("ts", "")},
+            {"level", level},
+            {"message", line.value("content", "")},
+        });
+      }
+      bool finished = false;
+      if (step) {
+        auto st = step->value("status", "");
+        finished = st == "completed" ||
+                   st == "failed" ||
+                   st == "cancelled" ||
+                   st == "skipped";
+      }
+      ui::RenderArgs args;
+      args.fragment = "takt/step_output_tail";
+      args.data = {
+          {"entries", entries},
+          {"step_finished", finished},
+      };
+      auto r = ui::Render(
+          *eng, ui::ResponseFormat::Fragment, args);
+      if (!r) {
+        return crow::response(500,
+            r.error().message);
       }
       return std::move(*r);
     });
@@ -480,6 +539,29 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
       args.fragment = "takt/agents";
       args.layout = "layout";
       args.data = {{"agents", enriched}};
+      auto r = ui::Render(*eng, req, args);
+      if (!r) {
+        return ui::RenderError(*eng, req, 500,
+                               "render_failed",
+                               r.error().message);
+      }
+      return std::move(*r);
+    });
+
+    // -- Meta agents --
+    CROW_ROUTE(app, "/meta-agents")
+    ([eng, this](const crow::request &req) {
+      auto agents =
+          client_.Get("/api/meta-agents");
+      if (!agents) {
+        return ui::RenderError(
+            *eng, req, 502, "takt_unreachable",
+            agents.error().message);
+      }
+      ui::RenderArgs args;
+      args.fragment = "takt/meta_agents";
+      args.layout = "layout";
+      args.data = {{"agents", *agents}};
       auto r = ui::Render(*eng, req, args);
       if (!r) {
         return ui::RenderError(*eng, req, 500,
@@ -577,6 +659,56 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
                     resp.error().message);
               }
               return crow::response(201,
+                  resp->dump());
+            });
+
+    CROW_ROUTE(app, "/meta-agents/create")
+        .methods("POST"_method)(
+            [this, field](const crow::request &req) {
+              auto name = field(req, "name");
+              auto prompt = field(req, "prompt");
+              auto model = field(req, "model");
+              if (model.empty()) model = "sonnet";
+              auto resp = client_.Post(
+                  "/api/meta-agents",
+                  nlohmann::json{
+                      {"name", name},
+                      {"prompt", prompt},
+                      {"model", model}}
+                      .dump());
+              if (!resp) {
+                return crow::response(502,
+                    resp.error().message);
+              }
+              return crow::response(201,
+                  resp->dump());
+            });
+
+    CROW_ROUTE(app, "/meta-agents/<int>/run")
+        .methods("POST"_method)(
+            [this](const crow::request &, int id) {
+              auto resp = client_.Post(
+                  std::format(
+                      "/api/meta-agents/{}/run", id));
+              if (!resp) {
+                return crow::response(502,
+                    resp.error().message);
+              }
+              return crow::response(201,
+                  resp->dump());
+            });
+
+    CROW_ROUTE(app, "/meta-agents/<int>")
+        .methods("DELETE"_method)(
+            [this](const crow::request &, int id) {
+              auto resp = client_.Delete(
+                  std::format(
+                      "/api/meta-agents/{}", id));
+              if (!resp) {
+                return crow::response(502,
+                    resp.error().message);
+              }
+              return crow::response(200,
                   resp->dump());
             });
 
