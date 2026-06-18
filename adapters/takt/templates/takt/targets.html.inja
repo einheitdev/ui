@@ -30,6 +30,13 @@
             <button class="btn btn-ghost btn-sm"
               hx-post="/targets/{{ t.name }}/release"
               hx-swap="none">release</button>
+{% else %}
+{% if not t.template %}
+            <form hx-post="/targets/{{ t.name }}/claim" hx-swap="none" class="inline-form" style="display:inline">
+              <input type="text" name="workspace" placeholder="workspace" style="width:10ch" required>
+              <button type="submit" class="btn btn-ghost btn-sm">claim</button>
+            </form>
+{% endif %}
 {% endif %}
           </td>
         </tr>

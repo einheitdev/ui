@@ -11,11 +11,13 @@
 #include <cstdint>
 #include <format>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <utility>
 #include <vector>
 
+#include <httplib.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -137,7 +139,7 @@ auto RunRows(const nlohmann::json &runs)
 class TaktUiAdapter final : public ui::ProductUiAdapter {
  public:
   explicit TaktUiAdapter(TaktClientConfig cfg)
-      : client_(std::move(cfg)) {}
+      : client_cfg_(cfg), client_(std::move(cfg)) {}
 
   ~TaktUiAdapter() override {
     poller_stop_.store(true);
@@ -476,14 +478,49 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
     });
 
     // -- POST actions --
+
+    // Helper: extract a field from form body or JSON.
+    auto field = [](const crow::request &req,
+                    const std::string &key)
+        -> std::string {
+      auto ct = req.get_header_value("Content-Type");
+      if (ct.find("application/json") !=
+          std::string::npos) {
+        auto j = nlohmann::json::parse(
+            req.body, nullptr, false);
+        return j.value(key, std::string{});
+      }
+      // URL-encoded form: key=value&key2=value2
+      auto pos = req.body.find(key + "=");
+      if (pos == std::string::npos) return {};
+      auto start = pos + key.size() + 1;
+      auto end = req.body.find('&', start);
+      auto raw = end == std::string::npos
+          ? req.body.substr(start)
+          : req.body.substr(start, end - start);
+      // Decode %XX and +
+      std::string out;
+      for (std::size_t i = 0; i < raw.size(); ++i) {
+        if (raw[i] == '+') {
+          out += ' ';
+        } else if (raw[i] == '%' &&
+                   i + 2 < raw.size()) {
+          auto hex = raw.substr(i + 1, 2);
+          out += static_cast<char>(
+              std::stoi(hex, nullptr, 16));
+          i += 2;
+        } else {
+          out += raw[i];
+        }
+      }
+      return out;
+    };
+
     CROW_ROUTE(app, "/targets/<string>/claim")
         .methods("POST"_method)(
-            [this](const crow::request &req,
-                   std::string name) {
-              auto body = nlohmann::json::parse(
-                  req.body, nullptr, false);
-              auto workspace = body.value(
-                  "workspace", std::string{});
+            [this, field](const crow::request &req,
+                          std::string name) {
+              auto workspace = field(req, "workspace");
               auto resp = client_.Post(
                   std::format(
                       "/api/targets/{}/claim", name),
@@ -516,11 +553,13 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
 
     CROW_ROUTE(app, "/runs/trigger")
         .methods("POST"_method)(
-            [this](const crow::request &req) {
-              auto body = nlohmann::json::parse(
-                  req.body, nullptr, false);
+            [this, field](const crow::request &req) {
+              auto workspace = field(req, "workspace");
               auto resp = client_.Post(
-                  "/api/runs", body.dump());
+                  "/api/runs",
+                  nlohmann::json{
+                      {"workspace", workspace}}
+                      .dump());
               if (!resp) {
                 return crow::response(502,
                     resp.error().message);
@@ -528,39 +567,146 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
               return crow::response(201,
                   resp->dump());
             });
+
+    CROW_ROUTE(app, "/workspaces/create")
+        .methods("POST"_method)(
+            [this, field](const crow::request &req) {
+              auto name = field(req, "name");
+              auto repos_str = field(req, "repos");
+              nlohmann::json repos_arr =
+                  nlohmann::json::array();
+              std::istringstream iss(repos_str);
+              std::string tok;
+              while (iss >> tok) {
+                repos_arr.push_back(tok);
+              }
+              auto resp = client_.Post(
+                  "/api/workspaces",
+                  nlohmann::json{
+                      {"name", name},
+                      {"repos", repos_arr}}
+                      .dump());
+              if (!resp) {
+                return crow::response(502,
+                    resp.error().message);
+              }
+              return crow::response(201,
+                  resp->dump());
+            });
+
+    CROW_ROUTE(app, "/workspaces/<string>")
+        .methods("DELETE"_method)(
+            [this](const crow::request &,
+                   std::string name) {
+              auto resp = client_.Delete(
+                  std::format(
+                      "/api/workspaces/{}", name));
+              if (!resp) {
+                return crow::response(502,
+                    resp.error().message);
+              }
+              return crow::response(200,
+                  resp->dump());
+            });
   }
 
  private:
-  /// Poll the takt API every 5s and push updates over
-  /// WebSocket.
+  /// Try SSE stream from /api/events; on any event,
+  /// refresh the relevant data and push via WebSocket.
+  /// Falls back to 5s polling if SSE fails.
   void StartPoller(ui::EventStream *events) {
     if (!events) return;
     poller_ = std::thread([this, events]() {
       using namespace std::chrono;
       while (!poller_stop_.load(
           std::memory_order_relaxed)) {
+        if (TrySse(events)) continue;
+        PollOnce(events);
         std::this_thread::sleep_for(seconds(5));
-        if (poller_stop_.load(
-                std::memory_order_relaxed)) {
-          break;
-        }
-        auto runs = client_.Get("/api/runs?limit=10");
-        if (runs) {
-          events->Publish(
-              "takt.runs", {{"runs", RunRows(*runs)}});
-        }
-        auto ws = client_.Get("/api/workspaces");
-        auto agents = client_.Get("/api/agents");
-        auto targets = client_.Get("/api/targets");
-        if (ws && runs && agents && targets) {
-          events->Publish("takt.dashboard",
-              {{"summary", DashboardSummary(
-                  *ws, *runs, *agents, *targets)}});
-        }
       }
     });
   }
 
+  /// Attempt to connect to the SSE stream. Returns true
+  /// if the stream ran and should be retried, false if
+  /// the connection failed and we should fall back.
+  auto TrySse(ui::EventStream *events) -> bool {
+    using namespace std::chrono;
+    auto url = client_cfg_.base_url;
+    std::string host = "127.0.0.1";
+    int port = 7433;
+    if (url.starts_with("http://")) {
+      auto rest = url.substr(7);
+      auto slash = rest.find('/');
+      if (slash != std::string::npos)
+        rest = rest.substr(0, slash);
+      auto colon = rest.find(':');
+      if (colon != std::string::npos) {
+        host = rest.substr(0, colon);
+        try {
+          port = std::stoi(rest.substr(colon + 1));
+        } catch (...) {}
+      } else {
+        host = rest;
+        port = 80;
+      }
+    }
+    httplib::Client cli(host, port);
+    cli.set_read_timeout(seconds(35));
+    cli.set_connection_timeout(seconds(2));
+    std::string buffer;
+    std::string event_type;
+    auto result = cli.Get(
+        "/api/events",
+        [&](const char *data, size_t len) -> bool {
+          if (poller_stop_.load(
+                  std::memory_order_relaxed)) {
+            return false;
+          }
+          buffer.append(data, len);
+          while (true) {
+            auto nl = buffer.find('\n');
+            if (nl == std::string::npos) break;
+            auto line = buffer.substr(0, nl);
+            buffer.erase(0, nl + 1);
+            if (line.starts_with("event: ")) {
+              event_type = line.substr(7);
+            } else if (line.starts_with("data: ")) {
+              OnSseData(events, event_type,
+                        line.substr(6));
+              event_type.clear();
+            }
+          }
+          return true;
+        });
+    return result && result->status == 200;
+  }
+
+  void OnSseData(ui::EventStream *events,
+                 const std::string &type,
+                 const std::string &data) {
+    if (type == "error") return;
+    // Any event triggers a dashboard refresh.
+    PollOnce(events);
+  }
+
+  void PollOnce(ui::EventStream *events) {
+    auto runs = client_.Get("/api/runs?limit=10");
+    if (runs) {
+      events->Publish(
+          "takt.runs", {{"runs", RunRows(*runs)}});
+    }
+    auto ws = client_.Get("/api/workspaces");
+    auto agents = client_.Get("/api/agents");
+    auto targets = client_.Get("/api/targets");
+    if (ws && runs && agents && targets) {
+      events->Publish("takt.dashboard",
+          {{"summary", DashboardSummary(
+              *ws, *runs, *agents, *targets)}});
+    }
+  }
+
+  TaktClientConfig client_cfg_;
   TaktClient client_;
   std::thread poller_;
   std::atomic<bool> poller_stop_{false};
