@@ -202,6 +202,11 @@ TEST(TaktAdapter,
   ASSERT_TRUE(ag.has_value()) << ag.error().message;
   EXPECT_NE(ag->find("sonnet"), std::string::npos);
 
+  // Agents table fragment (WebSocket swap target)
+  auto at = eng.Render("takt/agents_table", agents_data);
+  ASSERT_TRUE(at.has_value()) << at.error().message;
+  EXPECT_NE(at->find("sonnet"), std::string::npos);
+
   // Agents empty
   auto ag_empty = eng.Render(
       "takt/agents",

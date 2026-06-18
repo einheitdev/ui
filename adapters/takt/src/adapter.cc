@@ -190,6 +190,12 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
         .swap_target = "dashboard-summary",
         .swap_strategy = "outerHTML",
     });
+    events->Bind(ui::TopicBinding{
+        .topic = "takt.agents",
+        .fragment = "takt/agents_table",
+        .swap_target = "agents-table",
+        .swap_strategy = "outerHTML",
+    });
 
     // -- Dashboard --
     CROW_ROUTE(app, "/")
@@ -464,10 +470,16 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
             *eng, req, 502, "takt_unreachable",
             agents.error().message);
       }
+      nlohmann::json enriched = nlohmann::json::array();
+      for (auto a : *agents) {
+        a["status_semantic"] = StatusSemantic(
+            a.value("status", ""));
+        enriched.push_back(std::move(a));
+      }
       ui::RenderArgs args;
       args.fragment = "takt/agents";
       args.layout = "layout";
-      args.data = {{"agents", *agents}};
+      args.data = {{"agents", enriched}};
       auto r = ui::Render(*eng, req, args);
       if (!r) {
         return ui::RenderError(*eng, req, 500,
@@ -565,6 +577,20 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
                     resp.error().message);
               }
               return crow::response(201,
+                  resp->dump());
+            });
+
+    CROW_ROUTE(app, "/runs/<int>/cancel")
+        .methods("POST"_method)(
+            [this](const crow::request &, int id) {
+              auto resp = client_.Post(
+                  std::format(
+                      "/api/runs/{}/cancel", id));
+              if (!resp) {
+                return crow::response(502,
+                    resp.error().message);
+              }
+              return crow::response(200,
                   resp->dump());
             });
 
@@ -699,6 +725,16 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
     auto ws = client_.Get("/api/workspaces");
     auto agents = client_.Get("/api/agents");
     auto targets = client_.Get("/api/targets");
+    if (agents) {
+      nlohmann::json enriched = nlohmann::json::array();
+      for (auto a : *agents) {
+        a["status_semantic"] = StatusSemantic(
+            a.value("status", ""));
+        enriched.push_back(std::move(a));
+      }
+      events->Publish("takt.agents",
+          {{"agents", enriched}});
+    }
     if (ws && runs && agents && targets) {
       events->Publish("takt.dashboard",
           {{"summary", DashboardSummary(
