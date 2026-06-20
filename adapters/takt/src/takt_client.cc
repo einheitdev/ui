@@ -135,7 +135,18 @@ auto DoRequest(
         std::format("{} {} returned {}: {}", method,
                     path, res->status, res->body)));
   }
-  return ParseJson(res->body);
+  auto parsed = ParseJson(res->body);
+  if (!parsed) return parsed;
+  // Unwrap takt API envelope: {"status":"ok","data":{...}}
+  // Then if data has a single key, return its value directly.
+  if (parsed->contains("data")) {
+    auto &data = (*parsed)["data"];
+    if (data.is_object() && data.size() == 1) {
+      return data.begin().value();
+    }
+    return data;
+  }
+  return parsed;
 }
 
 }  // namespace
