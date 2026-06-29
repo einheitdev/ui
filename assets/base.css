@@ -94,6 +94,12 @@ code, pre, kbd, samp {
   max-width: 1200px;
   transition: margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+.app-main.app-viewport {
+  height: 100vh;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+}
 /* Pinned sidebar pushes content right so nothing is overlaid;
    hover-expand stays an overlay (transient peek shouldn't
    reflow the page). The render-blocking inline <script> in the
