@@ -17,12 +17,29 @@
 
 #include <spdlog/spdlog.h>
 
+#include "einheit/ui/boundary.h"
+
 namespace einheit::ui {
 namespace {
 
 auto MakeError(StreamError code, std::string msg)
     -> Error<StreamError> {
   return Error<StreamError>{code, std::move(msg)};
+}
+
+// Fan a frame out to a snapshot of subscribers. Each send is
+// individually guarded: a throw or failure writing to one connection
+// (a client that vanished mid-broadcast) must not abort the fan-out
+// to the rest, and must never propagate — this runs on request and
+// sampler threads alike. A dead socket is dropped by Crow's own
+// onclose; here we just make sure one bad write can't take down the
+// loop or the process.
+void Broadcast(const std::vector<crow::websocket::connection *> &conns,
+               const std::string &frame) {
+  for (auto *c : conns) {
+    if (c == nullptr) continue;
+    Guard("ws send_text", [&] { c->send_text(frame); });
+  }
 }
 
 }  // namespace
@@ -90,7 +107,7 @@ auto EventStream::Publish(std::string_view topic,
     snap.reserve(impl_->connections.size());
     for (auto *c : impl_->connections) snap.push_back(c);
   }
-  for (auto *c : snap) c->send_text(frame);
+  Broadcast(snap, frame);
   return {};
 }
 
@@ -109,13 +126,19 @@ auto EventStream::OnClose(crow::websocket::connection &conn) -> void {
 }
 
 auto EventStream::Mount(crow::SimpleApp &app) -> void {
+  // Every callback is wrapped in Guard: Crow invokes these directly
+  // from its ASIO read loop with no try/catch of its own, so a throw
+  // here (bad_alloc inserting into the set, anything) would terminate
+  // the server. Guard logs and swallows instead.
   CROW_WEBSOCKET_ROUTE(app, "/events")
       .onopen([this](crow::websocket::connection &conn) {
-        OnOpen(conn);
+        Guard("ws:/events onopen", [&] { OnOpen(conn); });
       })
       .onclose([this](crow::websocket::connection &conn,
                       const std::string & /*reason*/,
-                      uint16_t /*code*/) { OnClose(conn); })
+                      uint16_t /*code*/) {
+        Guard("ws:/events onclose", [&] { OnClose(conn); });
+      })
       .onmessage([](crow::websocket::connection & /*conn*/,
                     const std::string & /*data*/,
                     bool /*is_binary*/) {
@@ -165,7 +188,7 @@ auto EventStream::PublishToast(std::string_view severity,
     snap.reserve(impl_->connections.size());
     for (auto *c : impl_->connections) snap.push_back(c);
   }
-  for (auto *c : snap) c->send_text(frame);
+  Broadcast(snap, frame);
 }
 
 auto EventStream::PublishData(std::string_view topic,
@@ -187,7 +210,7 @@ auto EventStream::PublishData(std::string_view topic,
     snap.reserve(impl_->metric_conns.size());
     for (auto *c : impl_->metric_conns) snap.push_back(c);
   }
-  for (auto *c : snap) c->send_text(serialized);
+  Broadcast(snap, serialized);
 }
 
 auto EventStream::RecentPoints(std::string_view topic) const
@@ -203,13 +226,17 @@ auto EventStream::RecentPoints(std::string_view topic) const
 auto EventStream::MountMetrics(crow::SimpleApp &app) -> void {
   CROW_WEBSOCKET_ROUTE(app, "/metrics/ws")
       .onopen([this](crow::websocket::connection &conn) {
-        std::lock_guard<std::mutex> lock(impl_->mu);
-        impl_->metric_conns.insert(&conn);
+        Guard("ws:/metrics/ws onopen", [&] {
+          std::lock_guard<std::mutex> lock(impl_->mu);
+          impl_->metric_conns.insert(&conn);
+        });
       })
       .onclose([this](crow::websocket::connection &conn,
                       const std::string &, uint16_t) {
-        std::lock_guard<std::mutex> lock(impl_->mu);
-        impl_->metric_conns.erase(&conn);
+        Guard("ws:/metrics/ws onclose", [&] {
+          std::lock_guard<std::mutex> lock(impl_->mu);
+          impl_->metric_conns.erase(&conn);
+        });
       })
       .onmessage([](crow::websocket::connection &,
                     const std::string &, bool) {

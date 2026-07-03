@@ -43,6 +43,16 @@ struct ServerConfig {
   std::string assets_dir;
   /// Number of Crow worker threads. 0 = std::thread::hardware_concurrency().
   std::uint16_t worker_threads = 0;
+  /// Install the framework's signal regime (SIGPIPE-ignore, fault
+  /// diagnostics, USR2/HUP flags) during Configure(). Leave true for
+  /// the real server; tests that don't want process-global signal
+  /// changes set it false.
+  bool install_signals = true;
+  /// When true, uncaught-exception responses include the exception
+  /// text (developer convenience). When false (production default),
+  /// the client sees only a generic message and the detail goes to
+  /// the server log — no internal detail leaks to the wire.
+  bool debug_errors = false;
 };
 
 /// Apply the framework's defaults onto an existing Crow app. Adapter

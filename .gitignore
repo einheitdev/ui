@@ -1,5 +1,6 @@
 build/
 build-debug/
+build-asan/
 compile_commands.json
 .cache/
 .vscode/

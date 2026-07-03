@@ -69,6 +69,28 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   endif()
 endif()
 
+# AddressSanitizer + UndefinedBehaviorSanitizer build. Catches the
+# crash classes try/catch cannot — null derefs, use-after-free on the
+# WebSocket connection lifecycle, buffer overflows, integer UB — before
+# they ship. The whole test suite is expected to pass clean under it;
+# this is part of the hardening gate. Enable with the `asan` preset or
+# -DEINHEIT_UI_SANITIZE=ON.
+option(EINHEIT_UI_SANITIZE
+  "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
+if(EINHEIT_UI_SANITIZE)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(
+      -fsanitize=address,undefined
+      -fno-sanitize-recover=all
+      -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+    message(STATUS "Sanitizers ON: address,undefined")
+  else()
+    message(WARNING
+      "EINHEIT_UI_SANITIZE requested but compiler is not GNU/Clang")
+  endif()
+endif()
+
 message(STATUS "C compiler:   ${CMAKE_C_COMPILER}")
 message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
 
