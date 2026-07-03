@@ -1,0 +1,52 @@
+{# Live confd status region. Rendered on first paint (included by the
+   config page) and re-fetched by the polling #confd-status div, so a
+   browser that reconnects mid-window still sees the countdown and can
+   confirm. All values are direct reads off the Runtime. #}
+{% if pending.armed %}
+<div class="card card-warn" style="margin-bottom:12px">
+  <div class="card-body">
+    <strong>⏱ {{ pending.mmss }}</strong> until automatic rollback
+    — confirming commit {{ pending.commit }}.
+    <form hx-post="/config/confirm" hx-target="#confd-status"
+          hx-swap="innerHTML" style="display:inline; margin-left:8px">
+      <button type="submit">confirm</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<p>
+  {% if in_configure %}
+    candidate open (session {{ session_id }}) — changes staged, not yet
+    committed
+  {% else %}
+    no candidate open
+  {% endif %}
+</p>
+
+{% if message %}<p class="msg">{{ message }}</p>{% endif %}
+
+<h3>running config ({{ running_count }} keys)</h3>
+<table class="table">
+  <thead><tr><th>path</th><th>value</th></tr></thead>
+  <tbody>
+  {% for row in running %}
+    <tr><td>{{ row.key }}</td><td>{{ row.value }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3>audit trail (mutations only)</h3>
+<table class="table">
+  <thead>
+    <tr><th>user</th><th>role</th><th>command</th><th>outcome</th></tr>
+  </thead>
+  <tbody>
+  {% for a in audit %}
+    <tr>
+      <td>{{ a.user }}</td><td>{{ a.role }}</td>
+      <td>{{ a.command }}</td><td>{{ a.outcome }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>

@@ -100,6 +100,16 @@ option(EINHEIT_UI_BUILD_BINARY   "Build the einheit-ui binary" ON)
 option(EINHEIT_UI_TEMPLATE_HOT_RELOAD
   "Reload templates from disk on every render (debug only)" OFF)
 
+# Management-plane step 3: the UI drives the CLI command engine. When ON,
+# the UI links the sibling einheit-cli as a library so every *mutating* UI
+# action runs through the same `engine::Execute` chokepoint the shell uses
+# (one audit trail, one auth path). Enables the command-driver seam
+# (`einheit_ui_command`) and the confd reference adapter.
+option(EINHEIT_UI_WITH_ENGINE
+  "Link the sibling einheit-cli command engine (confd adapter + seam)" ON)
+set(EINHEIT_UI_CLI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../cli"
+  CACHE PATH "Path to the einheit-cli source tree (the command engine)")
+
 # Where templates live at runtime. Default: alongside the binary; the
 # adapter can override per-product.
 set(EINHEIT_UI_TEMPLATES_DIR
@@ -111,12 +121,43 @@ include("cmake/3rd_party_libs/fetch.cmake")
 include("cmake/lib_ui_render.cmake")
 include("cmake/lib_ui_core.cmake")
 
+# ---------------------------------------------------------------------------
+# Command-engine seam (management-plane step 3: "the UI drives the CLI").
+# cli is consumed read-only as a library; never modified here. Ordering is
+# load-bearing: this comes AFTER ui's fetch.cmake so ui's FetchContent
+# declarations of the shared deps (spdlog / CLI11 / nlohmann / googletest)
+# win, and cli's own `if(NOT TARGET ...)`-guarded fetches dedup against them
+# instead of redeclaring the same targets.
+# ---------------------------------------------------------------------------
+set(EINHEIT_UI_HAVE_ENGINE OFF)
+if(EINHEIT_UI_WITH_ENGINE)
+  if(EXISTS "${EINHEIT_UI_CLI_DIR}/CMakeLists.txt")
+    # cli is a build-only dependency here: no cli test suite (mirrors the
+    # peer workspaces), but keep its adapters — the cli binary links them.
+    set(EINHEIT_BUILD_TESTS OFF CACHE BOOL "cli tests off under ui" FORCE)
+    add_subdirectory("${EINHEIT_UI_CLI_DIR}" "${CMAKE_BINARY_DIR}/cli")
+    include("cmake/lib_ui_command.cmake")
+    set(EINHEIT_UI_HAVE_ENGINE ON)
+    message(STATUS
+      "Command engine: linking einheit-cli from ${EINHEIT_UI_CLI_DIR}")
+  else()
+    message(WARNING
+      "EINHEIT_UI_WITH_ENGINE=ON but no CMakeLists.txt at "
+      "${EINHEIT_UI_CLI_DIR}; confd adapter + command seam disabled")
+  endif()
+endif()
+
 if(EINHEIT_UI_BUILD_ADAPTERS)
   add_subdirectory(adapters/example)
   add_subdirectory(adapters/hd_relay)
   add_subdirectory(adapters/takt)
   add_subdirectory(adapters/shell)
   add_subdirectory(adapters/editor)
+  # The confd reference adapter drives the command engine, so it only
+  # builds when the engine is linked.
+  if(EINHEIT_UI_HAVE_ENGINE)
+    add_subdirectory(adapters/confd)
+  endif()
 endif()
 
 if(EINHEIT_UI_BUILD_BINARY)

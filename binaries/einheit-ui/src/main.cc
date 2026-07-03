@@ -20,6 +20,9 @@
 #include <crow.h>
 #include <spdlog/spdlog.h>
 
+#ifdef EINHEIT_UI_WITH_CONFD
+#include "einheit/adapters/confd/ui_adapter.h"
+#endif
 #include "einheit/adapters/editor/ui_adapter.h"
 #include "einheit/adapters/example/ui_adapter.h"
 #include "einheit/adapters/hd_relay/ui_adapter.h"
@@ -121,7 +124,7 @@ auto main(int argc, char **argv) -> int {
   app.add_option("--tls-key", tls_key, "TLS private key path");
   app.add_option("--adapter", adapter_name,
                  "Product adapter "
-                 "(example | hd-relay | takt)");
+                 "(example | hd-relay | takt | confd)");
   app.add_option("--templates", templates_dir,
                  "Override templates root");
   app.add_option("--assets", assets_dir,
@@ -200,6 +203,16 @@ auto main(int argc, char **argv) -> int {
     tcfg2.base_url = takt_url;
     adapter = einheit::adapters::takt::NewTaktUiAdapter(
         std::move(tcfg2));
+  } else if (adapter_name == "confd") {
+#ifdef EINHEIT_UI_WITH_CONFD
+    // The reference "UI drives the CLI" appliance: mutations route
+    // through the command engine, reads stay direct off the Runtime.
+    adapter = einheit::adapters::confd::NewConfdUiAdapter();
+#else
+    std::cerr << "adapter 'confd' requires building with "
+                 "EINHEIT_UI_WITH_ENGINE=ON\n";
+    return 1;
+#endif
   } else {
     std::cerr << std::format("unknown adapter '{}'\n",
                              adapter_name);

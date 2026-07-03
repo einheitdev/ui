@@ -1,0 +1,57 @@
+{# confd config page. Every form below POSTs to a mutation route that
+   drives a CLI command through the shared engine; the #confd-status
+   region reads state back on the fast direct path and polls so a
+   reconnecting browser always sees the live candidate + countdown. #}
+<section class="card">
+  <h2 class="card-title">confd — configuration</h2>
+  <div class="card-body">
+    <p>Every action here is a CLI command run through the shared
+       command engine — audited and role-gated, exactly as from the
+       shell. Reads (below) take the fast direct path.</p>
+
+    <form hx-post="/config/configure" hx-target="#confd-status"
+          hx-swap="innerHTML" style="margin:6px 0">
+      <button type="submit">configure — open candidate</button>
+    </form>
+
+    <form hx-post="/config/set" hx-target="#confd-status"
+          hx-swap="innerHTML" style="margin:6px 0">
+      <input name="path" placeholder="device.hostname">
+      <input name="value" placeholder="sw1">
+      <button type="submit">set</button>
+    </form>
+
+    <form hx-post="/config/delete" hx-target="#confd-status"
+          hx-swap="innerHTML" style="margin:6px 0">
+      <input name="path" placeholder="device.hostname">
+      <button type="submit">delete</button>
+    </form>
+
+    <form hx-post="/config/commit" hx-target="#confd-status"
+          hx-swap="innerHTML" style="margin:6px 0">
+      <button type="submit">commit</button>
+    </form>
+
+    <form hx-post="/config/commit-confirmed" hx-target="#confd-status"
+          hx-swap="innerHTML" style="margin:6px 0">
+      <input name="minutes" value="5" size="3">
+      <button type="submit">commit confirmed (auto-revert)</button>
+    </form>
+
+    <form hx-post="/config/rollback" hx-target="#confd-status"
+          hx-swap="innerHTML" style="margin:6px 0">
+      <input name="rev" placeholder="(blank = previous)">
+      <button type="submit">rollback</button>
+    </form>
+  </div>
+</section>
+
+<section class="card">
+  <h2 class="card-title">state</h2>
+  <div class="card-body">
+    <div id="confd-status" hx-get="/config/status"
+         hx-trigger="load, every 2s" hx-swap="innerHTML">
+      {% include "confd/status" %}
+    </div>
+  </div>
+</section>

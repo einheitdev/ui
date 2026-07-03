@@ -27,6 +27,14 @@ target_compile_definitions(einheit-ui
     EINHEIT_UI_INSTALLED_ASSETS_DIR="${CMAKE_INSTALL_PREFIX}/share/einheit-ui/assets"
 )
 
+# When the command engine is linked, ship the confd reference adapter in
+# the binary too, reachable via `--adapter confd`. EINHEIT_UI_WITH_CONFD
+# guards the branch in main.cc so the binary still builds without it.
+if(EINHEIT_UI_HAVE_ENGINE)
+  target_link_libraries(einheit-ui PRIVATE einheit_ui_adapter_confd)
+  target_compile_definitions(einheit-ui PRIVATE EINHEIT_UI_WITH_CONFD)
+endif()
+
 set_target_properties(einheit-ui PROPERTIES
   OUTPUT_NAME einheit-ui
 )

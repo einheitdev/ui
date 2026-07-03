@@ -161,3 +161,43 @@ if(TARGET einheit-shell-launcher)
     PROPERTIES TIMEOUT 30
   )
 endif()
+
+# Command-engine seam tests. Only built when the sibling cli engine is
+# linked (EINHEIT_UI_WITH_ENGINE). test_command_driver proves the
+# mutation->engine path plus audit/auth parity vs the CLI, and links the
+# Crow-free `einheit_ui_command` seam directly (no einheit_ui). The confd
+# adapter test proves its templates surface the commit-confirmed lifecycle.
+if(TARGET einheit_ui_command)
+  add_executable(test_command_driver test_command_driver.cc)
+  target_include_directories(test_command_driver
+    PRIVATE ${PROJECT_SOURCE_DIR})
+  target_link_libraries(test_command_driver
+    PRIVATE
+      einheit_ui_command
+      GTest::gtest
+      GTest::gtest_main
+  )
+  gtest_discover_tests(test_command_driver
+    DISCOVERY_TIMEOUT 10
+    PROPERTIES TIMEOUT 30
+  )
+
+  add_executable(test_confd_adapter test_confd_adapter.cc)
+  target_include_directories(test_confd_adapter
+    PRIVATE ${PROJECT_SOURCE_DIR})
+  target_compile_definitions(test_confd_adapter
+    PRIVATE
+      EINHEIT_UI_FRAMEWORK_TEMPLATES_DIR="${PROJECT_SOURCE_DIR}/templates"
+  )
+  target_link_libraries(test_confd_adapter
+    PRIVATE
+      einheit_ui
+      einheit_ui_adapter_confd
+      GTest::gtest
+      GTest::gtest_main
+  )
+  gtest_discover_tests(test_confd_adapter
+    DISCOVERY_TIMEOUT 10
+    PROPERTIES TIMEOUT 30
+  )
+endif()
