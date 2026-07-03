@@ -5,6 +5,7 @@ add_library(ui_core_obj OBJECT
   src/adapter.cc
   src/diff.cc
   src/route.cc
+  src/signals.cc
   src/stream.cc
   src/server.cc
   src/sparkline.cc

@@ -21,6 +21,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include "einheit/ui/boundary.h"
 #include "einheit/ui/route.h"
 
 namespace einheit::adapters::takt {
@@ -778,8 +779,20 @@ class TaktUiAdapter final : public ui::ProductUiAdapter {
       using namespace std::chrono;
       while (!poller_stop_.load(
           std::memory_order_relaxed)) {
-        if (TrySse(events)) continue;
-        PollOnce(events);
+        // Guard the whole iteration: TrySse/PollOnce parse daemon
+        // JSON, and a malformed response would otherwise throw a
+        // nlohmann type_error straight out of this bare thread and
+        // terminate the process. Caught here, the poller sleeps and
+        // retries instead.
+        bool sse_live = false;
+        ui::Guard("takt poller", [&] {
+          if (TrySse(events)) {
+            sse_live = true;
+            return;
+          }
+          PollOnce(events);
+        });
+        if (sse_live) continue;
         std::this_thread::sleep_for(seconds(5));
       }
     });

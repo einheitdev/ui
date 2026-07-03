@@ -5,12 +5,15 @@
 // Copyright (c) 2026 Einheit Networks
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <CLI/CLI.hpp>
@@ -25,9 +28,11 @@
 #include "einheit/ui/adapter.h"
 #include "einheit/ui/diff.h"
 #include "einheit/ui/sparkline.h"
+#include "einheit/ui/boundary.h"
 #include "einheit/ui/render/template_engine.h"
 #include "einheit/ui/route.h"
 #include "einheit/ui/server.h"
+#include "einheit/ui/signals.h"
 #include "einheit/ui/stream.h"
 #include "einheit/ui/theme.h"
 
@@ -462,8 +467,33 @@ auto main(int argc, char **argv) -> int {
     einheit::ui::SetLayoutEditorPath("/edit");
   }
 
-  if (auto r = einheit::ui::Run(crow_app, scfg); !r) {
-    std::cerr << std::format("server: {}\n", r.error().message);
+  // Supervisor thread: consumes the async control-signal flags the
+  // regime raises. SIGUSR2 -> dump status; SIGHUP -> flush/reopen
+  // logs. The signal handlers themselves only flip a flag (all they
+  // can safely do); the real work happens here on a normal thread.
+  std::atomic<bool> supervisor_stop{false};
+  std::thread supervisor([&] {
+    using namespace std::chrono_literals;
+    while (!supervisor_stop.load(std::memory_order_relaxed)) {
+      einheit::ui::Guard("ui supervisor", [&] {
+        if (einheit::ui::ConsumeStatusRequest()) {
+          spdlog::info("[status] adapter={} subscribers={}",
+                       adapter_name, events.SubscriberCount());
+        }
+        if (einheit::ui::ConsumeReloadRequest()) {
+          spdlog::info("[reload] flushing logs");
+          spdlog::default_logger()->flush();
+        }
+      });
+      std::this_thread::sleep_for(200ms);
+    }
+  });
+
+  const auto run_result = einheit::ui::Run(crow_app, scfg);
+  supervisor_stop.store(true);
+  supervisor.join();
+  if (!run_result) {
+    std::cerr << std::format("server: {}\n", run_result.error().message);
     return 1;
   }
   return 0;

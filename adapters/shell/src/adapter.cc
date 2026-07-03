@@ -18,6 +18,7 @@
 #include <spdlog/spdlog.h>
 
 #include "adapters/shell/src/pty_session.h"
+#include "einheit/ui/boundary.h"
 #include "einheit/ui/error.h"
 #include "einheit/ui/route.h"
 
@@ -123,6 +124,7 @@ auto Mount(crow::SimpleApp &app,
   CROW_WEBSOCKET_ROUTE(app, "/shell/ws")
       .onopen([registry, make_spec, make_sink](
                   crow::websocket::connection &conn) {
+       ui::Guard("shell ws onopen", [&] {
         auto session = std::make_unique<PtySession>();
         // Capturing &conn is safe — Crow guarantees the
         // connection outlives onopen/onmessage/onclose for this
@@ -141,11 +143,13 @@ auto Mount(crow::SimpleApp &app,
         }
         std::lock_guard<std::mutex> lk(registry->mu);
         registry->sessions[&conn] = std::move(session);
+       });
       })
       .onmessage(
           [registry, make_spec, make_sink](
               crow::websocket::connection &conn,
               const std::string &data, bool is_binary) {
+           ui::Guard("shell ws onmessage", [&] {
             // Convention: text frames starting with `{` are JSON
             // control envelopes (resize); everything else (binary
             // OR plain-text input) is forwarded as keystrokes.
@@ -203,10 +207,12 @@ auto Mount(crow::SimpleApp &app,
               }
             }
             session->Write(data);
+           });
           })
       .onclose([registry](crow::websocket::connection &conn,
                           const std::string & /*reason*/,
                           uint16_t /*code*/) {
+       ui::Guard("shell ws onclose", [&] {
         std::unique_ptr<PtySession> session;
         {
           std::lock_guard<std::mutex> lk(registry->mu);
@@ -217,6 +223,7 @@ auto Mount(crow::SimpleApp &app,
         }
         // Destructor reaps the child + joins the reader.
         session.reset();
+       });
       });
 
   return {};

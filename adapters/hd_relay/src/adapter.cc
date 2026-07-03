@@ -20,6 +20,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include "einheit/ui/boundary.h"
 #include "einheit/ui/route.h"
 
 namespace einheit::adapters::hd_relay {
@@ -417,38 +418,44 @@ class HdRelayUiAdapter final : public ui::ProductUiAdapter {
       while (!sampler_stop_.load(std::memory_order_relaxed)) {
         std::this_thread::sleep_for(seconds(1));
         if (sampler_stop_.load(std::memory_order_relaxed)) break;
-        auto resp = client_.Get("/api/v1/counters");
-        if (!resp) continue;
-        Snapshot now;
-        now.valid = true;
-        now.ts = steady_clock::now();
-        now.recv = resp->value("total_recv_bytes",
-                                std::int64_t{0});
-        now.send = resp->value("total_send_bytes",
-                                std::int64_t{0});
-        now.mesh = resp->value("total_hd_mesh_forwards",
-                                std::int64_t{0});
-        now.fleet = resp->value("total_hd_fleet_forwards",
-                                 std::int64_t{0});
-        if (prev.valid) {
-          const double dt =
-              duration<double>(now.ts - prev.ts).count();
-          if (dt > 0) {
-            const double rx_bps = (now.recv - prev.recv) / dt;
-            const double tx_bps = (now.send - prev.send) / dt;
-            const double mesh_ps = (now.mesh - prev.mesh) / dt;
-            const double fleet_ps = (now.fleet - prev.fleet) / dt;
-            const auto epoch = system_clock::now()
-                                   .time_since_epoch();
-            const auto secs =
-                duration_cast<seconds>(epoch).count();
-            events->PublishData("hd.io_bps",
-                                {secs, rx_bps, tx_bps});
-            events->PublishData("hd.fwd_per_sec",
-                                {secs, mesh_ps, fleet_ps});
+        // One guarded iteration: a malformed daemon response (JSON
+        // type error out of nlohmann) or any other throw is logged
+        // and the sampler keeps running — a bad sample is a gap on
+        // the chart, never a dead thread and never a dead server.
+        ui::Guard("hd-relay sampler", [&] {
+          auto resp = client_.Get("/api/v1/counters");
+          if (!resp) return;
+          Snapshot now;
+          now.valid = true;
+          now.ts = steady_clock::now();
+          now.recv = resp->value("total_recv_bytes",
+                                  std::int64_t{0});
+          now.send = resp->value("total_send_bytes",
+                                  std::int64_t{0});
+          now.mesh = resp->value("total_hd_mesh_forwards",
+                                  std::int64_t{0});
+          now.fleet = resp->value("total_hd_fleet_forwards",
+                                   std::int64_t{0});
+          if (prev.valid) {
+            const double dt =
+                duration<double>(now.ts - prev.ts).count();
+            if (dt > 0) {
+              const double rx_bps = (now.recv - prev.recv) / dt;
+              const double tx_bps = (now.send - prev.send) / dt;
+              const double mesh_ps = (now.mesh - prev.mesh) / dt;
+              const double fleet_ps = (now.fleet - prev.fleet) / dt;
+              const auto epoch = system_clock::now()
+                                     .time_since_epoch();
+              const auto secs =
+                  duration_cast<seconds>(epoch).count();
+              events->PublishData("hd.io_bps",
+                                  {secs, rx_bps, tx_bps});
+              events->PublishData("hd.fwd_per_sec",
+                                  {secs, mesh_ps, fleet_ps});
+            }
           }
-        }
-        prev = now;
+          prev = now;
+        });
       }
     });
   }

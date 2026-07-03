@@ -20,6 +20,26 @@ einheit_ui_add_test(test_theme)
 einheit_ui_add_test(test_template_engine)
 einheit_ui_add_test(test_route)
 einheit_ui_add_test(test_stream)
+einheit_ui_add_test(test_boundary)
+einheit_ui_add_test(test_signals)
+
+# Live-server resilience/fault-injection test. Brings up a real Crow
+# app on a loopback port and hits it with cpp-httplib, so it links the
+# HTTP client too.
+add_executable(test_server_resilience test_server_resilience.cc)
+target_include_directories(test_server_resilience
+  PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(test_server_resilience
+  PRIVATE
+    einheit_ui
+    httplib::httplib
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(test_server_resilience
+  DISCOVERY_TIMEOUT 10
+  PROPERTIES TIMEOUT 60
+)
 
 # test_partials renders framework templates from disk; needs the
 # templates dir baked in.

@@ -25,6 +25,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include "einheit/ui/boundary.h"
+
 namespace einheit::adapters::shell {
 namespace {
 
@@ -153,8 +155,12 @@ auto PtySession::Spawn(const PtyLaunchSpec &spec, ByteSink sink)
         const ssize_t n = ::read(master_fd_, buf.data(), buf.size());
         if (n > 0) {
           if (sink_) {
-            sink_(std::string_view(buf.data(),
-                                   static_cast<std::size_t>(n)));
+            // sink_ writes to the WebSocket; a throw there (or a
+            // SIGPIPE-turned-error) must not escape this bare thread.
+            const auto count = static_cast<std::size_t>(n);
+            ui::Guard("shell pty reader sink", [&] {
+              sink_(std::string_view(buf.data(), count));
+            });
           }
         } else if (n == 0) {
           // EOF — child closed its slave end.
@@ -169,9 +175,11 @@ auto PtySession::Spawn(const PtyLaunchSpec &spec, ByteSink sink)
       // adapter's onmessage handler watches IsRunning() and
       // respawns on the next keystroke.
       if (sink_) {
-        sink_(
-            "\r\n\x1b[33m[session ended — press any key to start "
-            "a new one]\x1b[0m\r\n");
+        ui::Guard("shell pty reader eof-notice", [&] {
+          sink_(
+              "\r\n\x1b[33m[session ended — press any key to start "
+              "a new one]\x1b[0m\r\n");
+        });
       }
     });
   } catch (const std::exception &e) {
