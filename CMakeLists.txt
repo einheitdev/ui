@@ -131,7 +131,14 @@ include("cmake/lib_ui_core.cmake")
 # ---------------------------------------------------------------------------
 set(EINHEIT_UI_HAVE_ENGINE OFF)
 if(EINHEIT_UI_WITH_ENGINE)
-  if(EXISTS "${EINHEIT_UI_CLI_DIR}/CMakeLists.txt")
+  if(TARGET einheit_cli)
+    # A parent project (e.g. f) already added the cli tree; reuse
+    # its targets instead of adding the same directory twice.
+    include("cmake/lib_ui_command.cmake")
+    set(EINHEIT_UI_HAVE_ENGINE ON)
+    message(STATUS
+      "Command engine: reusing einheit-cli targets from parent build")
+  elseif(EXISTS "${EINHEIT_UI_CLI_DIR}/CMakeLists.txt")
     # cli is a build-only dependency here: no cli test suite (mirrors the
     # peer workspaces), but keep its adapters — the cli binary links them.
     set(EINHEIT_BUILD_TESTS OFF CACHE BOOL "cli tests off under ui" FORCE)
